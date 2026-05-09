@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const GATEWAY_URL = process.env.AI_GATEWAY_URL || "https://api.openai.com/v1/chat/completions";
+const MODEL = process.env.AI_MODEL || "gpt-4o";
 
 async function callAI(system: string, user: string): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
+  const apiKey = process.env.AI_API_KEY;
+  if (!apiKey) throw new Error("AI_API_KEY não configurada");
 
   const res = await fetch(GATEWAY_URL, {
     method: "POST",

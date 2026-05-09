@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -47,17 +46,18 @@ function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
-    if (result.error) {
+    
+    if (error) {
       toast.error("Erro ao entrar com Google");
       setGoogleLoading(false);
       return;
     }
-    if (result.redirected) return;
-    toast.success("Login realizado com sucesso!");
-    navigate({ to: "/feed" });
   };
 
   return (

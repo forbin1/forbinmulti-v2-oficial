@@ -43,8 +43,8 @@ export const Route = createRootRoute({
       { name: "twitter:title", content: "FORBIN MultiEmpresas — Conexão com oportunidades em segurança privada" },
       { name: "description", content: "FORBIN MultiEmpresas connects private security professionals with job opportunities." },
       { name: "twitter:description", content: "FORBIN MultiEmpresas connects private security professionals with job opportunities." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/12ed61ca-1b77-4140-ad9c-661eefbed122/id-preview-d7635d85--b8f0ecfc-7737-40d9-b026-d92132af60ea.lovable.app-1777047674996.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/12ed61ca-1b77-4140-ad9c-661eefbed122/id-preview-d7635d85--b8f0ecfc-7737-40d9-b026-d92132af60ea.lovable.app-1777047674996.png" },
+      { property: "og:image", content: "/og-image.png" },
+      { name: "twitter:image", content: "/og-image.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
