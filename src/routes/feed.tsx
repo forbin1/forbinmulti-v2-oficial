@@ -42,21 +42,6 @@ function FeedContent() {
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
         {/* Esquerda */}
         <aside className="hidden space-y-4 lg:block">
-          <div className="rounded-2xl border border-border/60 bg-card p-6 text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground text-2xl">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={userName} className="h-full w-full object-cover" />
-              ) : (
-                initials
-              )}
-            </div>
-            <p className="mt-3 font-semibold">{userName}</p>
-            <p className="text-xs text-muted-foreground">{userRole}</p>
-            <Button asChild variant="outline" className="mt-4 w-full rounded-full">
-              <Link to="/profissional">Ver meu perfil</Link>
-            </Button>
-          </div>
-
           <div className="rounded-2xl border border-border/60 bg-card p-6">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Atalhos</h3>
             <ul className="space-y-2 text-sm">
