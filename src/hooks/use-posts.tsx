@@ -23,32 +23,37 @@ export type DbPost = {
 export function usePosts() {
   const [posts, setPosts] = useState<DbPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newPostsCount, setNewPostsCount] = useState(0);
 
-  const loadPosts = async () => {
-    setLoading(true);
-    console.log("Iniciando carregamento de posts...");
+  const loadPosts = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     const { data, error } = await supabase
       .from("posts")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Erro ao carregar posts:", error);
-      toast.error("Erro ao carregar feed: " + error.message);
-    } else if (data) {
-      console.log("Posts carregados com sucesso:", data.length);
+    if (!error && data) {
       setPosts(data as DbPost[]);
+      setNewPostsCount(0);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    loadPosts();
+    loadPosts(true);
 
     // Real-time updates
     const channel = supabase
       .channel("public:posts")
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
+        // We can't easily get the current user ID here without passing it to the hook
+        // but loadPosts resets newPostsCount anyway.
+        setNewPostsCount(prev => prev + 1);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "posts" }, () => {
+        loadPosts();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, () => {
         loadPosts();
       })
       .subscribe();
@@ -58,7 +63,7 @@ export function usePosts() {
     };
   }, []);
 
-  return { posts, loading, refresh: loadPosts };
+  return { posts, loading, newPostsCount, refresh: () => loadPosts(false) };
 }
 
 export async function createPost(postData: Partial<DbPost>) {

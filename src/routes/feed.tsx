@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JOBS } from "@/data/mock";
 import { usePosts } from "@/hooks/use-posts";
@@ -68,17 +68,11 @@ function FeedContent() {
         </aside>
 
         {/* Centro — feed */}
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-6 relative">
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Experiências</h1>
           <ComposeBox />
-          {usePosts().posts.map((p, idx) => (
-            <Fragment key={p.id}>
-              <PostCard post={p} owned={user?.id === p.user_id} />
-              {(idx + 1) % 2 === 0 && (
-                <AdBanner ad={ADS[Math.floor(idx / 2) % ADS.length]} />
-              )}
-            </Fragment>
-          ))}
+          
+          <FeedList />
         </div>
 
         {/* Direita — escondida no mobile/tablet */}
@@ -106,6 +100,50 @@ function FeedContent() {
 
         </aside>
       </div>
+    </div>
+  );
+}
+function FeedList() {
+  const { posts, loading, newPostsCount, refresh } = usePosts();
+  const { user } = useAuth();
+
+  return (
+    <div className="space-y-6">
+      {newPostsCount > 0 && (
+        <div className="sticky top-24 z-20 flex justify-center animate-in fade-in slide-in-from-top-4 duration-500">
+          <Button 
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              refresh();
+            }}
+            className="h-10 rounded-full border border-primary/20 bg-card/80 px-6 py-2 text-sm font-bold shadow-2xl backdrop-blur-md hover:bg-primary hover:text-primary-foreground transition-all group"
+          >
+            <ArrowUp className="mr-2 h-4 w-4 group-hover:-translate-y-1 transition-transform" />
+            {newPostsCount === 1 ? "Nova publicação" : `${newPostsCount} novas publicações`}
+          </Button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-64 animate-pulse rounded-3xl bg-muted/20" />
+          ))}
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-border/60 p-12 text-center">
+          <p className="text-muted-foreground">Nenhuma experiência compartilhada ainda.</p>
+        </div>
+      ) : (
+        posts.map((p, idx) => (
+          <Fragment key={p.id}>
+            <PostCard post={p} owned={user?.id === p.user_id} />
+            {(idx + 1) % 2 === 0 && (
+              <AdBanner ad={ADS[Math.floor(idx / 2) % ADS.length]} />
+            )}
+          </Fragment>
+        ))
+      )}
     </div>
   );
 }
