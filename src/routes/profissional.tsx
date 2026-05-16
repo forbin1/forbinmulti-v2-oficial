@@ -22,8 +22,10 @@ import {
 import { POSTS } from "@/data/mock";
 import { MentionText } from "@/components/MentionText";
 import { toast } from "sonner";
-import { usePosts, addPost } from "@/hooks/use-posts";
+import { usePosts, createPost, deletePost } from "@/hooks/use-posts";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/profissional")({
   head: () => ({
@@ -62,7 +64,7 @@ function PerfilProfissional() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   
-  const allPosts = usePosts();
+  const { posts: allPosts } = usePosts();
 
   const loadProfile = async () => {
     if (!user) return;
@@ -118,7 +120,8 @@ function PerfilProfissional() {
   if (!profile) return <div className="p-20 text-center">Perfil não encontrado.</div>;
 
   const initials = profile.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const userPosts = allPosts.filter(p => p.author === profile.full_name);
+  
+  const userPosts = allPosts.filter(p => p.user_id === user?.id);
 
   return (
     <div>
@@ -424,27 +427,28 @@ export function ComposeBox() {
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   const avatarUrl = user?.user_metadata?.avatar_url;
 
-  const publish = () => {
+  const publish = async () => {
+    if (!user) return;
     if (!text.trim() && !image && !video) {
       toast.error("Adicione um texto, foto ou vídeo");
       return;
     }
-    addPost({
-      id: `u-${Date.now()}`,
-      author: userName,
-      role: user?.user_metadata?.role || "Profissional",
-      avatar: initials,
-      avatarUrl: avatarUrl,
-      time: "Agora",
-      content: text.trim(),
-      image: image ?? undefined,
-      video: video ?? undefined,
-      likes: 0,
-      comments: 0,
-      type: video ? "video" : image ? "image" : "text",
-    });
-    toast.success("Experiência publicada!");
-    reset();
+
+    try {
+      await createPost({
+        user_id: user.id,
+        author_name: userName,
+        author_role: user?.user_metadata?.role || "Profissional",
+        author_avatar: avatarUrl || null,
+        content: text.trim(),
+        image_url: image ?? null,
+        video_url: video ?? null,
+      });
+      toast.success("Experiência publicada!");
+      reset();
+    } catch (err: any) {
+      toast.error("Erro ao publicar: " + err.message);
+    }
   };
 
   return (
@@ -504,9 +508,8 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
 
   if (deleted) return null;
 
-  const handle = post.handle || post.author.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ".");
-  const totalComments = post.comments + comments.length;
-  const isSelf = owned || (user?.user_metadata?.full_name === post.author);
+  const totalComments = (post.comments_count || 0) + comments.length;
+  const isSelf = user?.id === post.user_id;
 
   const toggleLike = () => {
     setLiked((prev) => {
@@ -527,24 +530,34 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
     <article className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6">
       <header className="flex items-center gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground">
-          {post.avatarUrl ? (
-            <img src={post.avatarUrl} alt={post.author} className="h-full w-full object-cover" />
+          {post.author_avatar ? (
+            <img src={post.author_avatar} alt={post.author_name} className="h-full w-full object-cover" />
           ) : (
-            post.avatar
+            post.author_name.charAt(0).toUpperCase()
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">{post.author}</p>
-          <p className="truncate text-xs text-muted-foreground">{post.role} · {post.time}</p>
+          <p className="font-semibold">{post.author_name}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {post.author_role} · {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : "Agora"}
+          </p>
         </div>
-        {owned && (
+        {isSelf && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full"><MoreHorizontal className="h-5 w-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => { setDraft(content); setEditing(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => { setDeleted(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={async () => { 
+                try {
+                  await deletePost(post.id);
+                  setDeleted(true);
+                  toast.success("Postagem removida");
+                } catch (err) {
+                  toast.error("Erro ao remover");
+                }
+              }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -560,11 +573,11 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
       ) : (
         <p className="mt-4 break-words text-base leading-relaxed"><MentionText>{content}</MentionText></p>
       )}
-      {post.image && <img src={post.image} alt="" className="mt-4 w-full rounded-xl border border-border/60 object-cover" />}
-      {post.video && <video src={post.video} controls playsInline className="mt-4 w-full rounded-xl border border-border/60 bg-black" />}
+      {post.image_url && <img src={post.image_url} alt="" className="mt-4 w-full rounded-xl border border-border/60 object-cover" />}
+      {post.video_url && <video src={post.video_url} controls playsInline className="mt-4 w-full rounded-xl border border-border/60 bg-black" />}
       <footer className="mt-5 flex items-center gap-2 border-t border-border/60 pt-4 text-sm text-muted-foreground">
         <Button variant="ghost" size="sm" onClick={toggleLike} className={`rounded-full ${liked ? "text-primary" : ""}`}>
-          <Heart className={`mr-2 h-4 w-4 ${liked ? "fill-primary" : ""}`} /> {likes}
+          <Heart className={`mr-2 h-4 w-4 ${liked ? "fill-primary" : ""}`} /> {likes + (post.likes_count || 0)}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setShowComments((s) => !s)} className="rounded-full">
           <MessageCircle className="mr-2 h-4 w-4" /> {totalComments}

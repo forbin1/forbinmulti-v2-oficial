@@ -71,9 +71,9 @@ function FeedContent() {
         <div className="min-w-0 space-y-6">
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Experiências</h1>
           <ComposeBox />
-          {usePosts().map((p, idx) => (
+          {usePosts().posts.map((p, idx) => (
             <Fragment key={p.id}>
-              <PostCard post={p} owned={idx === 0} />
+              <PostCard post={p} owned={user?.id === p.user_id} />
               {(idx + 1) % 2 === 0 && (
                 <AdBanner ad={ADS[Math.floor(idx / 2) % ADS.length]} />
               )}
