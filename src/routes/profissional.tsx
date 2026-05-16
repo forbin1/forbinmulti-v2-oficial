@@ -561,20 +561,24 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
     setCommentDraft("");
   };
 
+  const authorName = post.profiles?.full_name || post.author_name;
+  const authorAvatar = post.profiles?.avatar_url || post.author_avatar;
+  const authorRole = post.profiles?.role || post.author_role;
+
   return (
     <article className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6">
       <header className="flex items-center gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground">
-          {post.author_avatar ? (
-            <img src={post.author_avatar} alt={post.author_name} className="h-full w-full object-cover" />
+          {authorAvatar ? (
+            <img src={authorAvatar} alt={authorName} className="h-full w-full object-cover" />
           ) : (
-            post.author_name.charAt(0).toUpperCase()
+            authorName.charAt(0).toUpperCase()
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">{post.author_name}</p>
+          <p className="font-semibold">{authorName}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {post.author_role} · {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : "Agora"}
+            {authorRole} · {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : "Agora"}
           </p>
         </div>
         {isSelf && (

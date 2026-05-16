@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 type NavItem = { to: string; label: string };
 
@@ -52,6 +54,24 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { user, role, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      const load = async () => {
+        const { data } = await supabase.from("profiles").select("full_name, avatar_url").eq("user_id", user.id).maybeSingle();
+        if (data) setProfile(data);
+      };
+      load();
+
+      const channel = supabase.channel(`profile-${user.id}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` }, (payload) => {
+          setProfile(payload.new);
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -117,20 +137,22 @@ export function SiteHeader() {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="rounded-full">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                      {user.user_metadata?.full_name?.[0]?.toUpperCase() ||
-                       user.user_metadata?.company_name?.[0]?.toUpperCase() ||
-                       user.email?.[0]?.toUpperCase() || "U"}
+                  <Button variant="ghost" className="rounded-full overflow-hidden p-0 h-10 w-10">
+                    <div className="flex h-full w-full items-center justify-center bg-primary text-sm font-bold text-primary-foreground">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        (profile?.full_name?.[0] || user.user_metadata?.full_name?.[0] || "U").toUpperCase()
+                      )}
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium">
-                      {user.user_metadata?.full_name || user.user_metadata?.company_name || "Usuário"}
+                    <p className="text-sm font-bold text-gradient-gold">
+                      {profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.company_name || "Usuário"}
                     </p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

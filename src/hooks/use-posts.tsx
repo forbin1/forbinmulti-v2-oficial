@@ -13,6 +13,11 @@ export type DbPost = {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  profiles?: {
+    full_name: string;
+    avatar_url: string | null;
+    role: string | null;
+  };
 };
 
 export function usePosts() {
@@ -23,7 +28,7 @@ export function usePosts() {
     setLoading(true);
     const { data, error } = await supabase
       .from("posts")
-      .select("*")
+      .select("*, profiles(full_name, avatar_url, role)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
