@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, Eye, EyeOff, Users, Loader2, Search } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff, Users, Loader2, Search, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ type Professional = {
   cnv_number: string | null;
   experience_years: number | null;
   is_hidden: boolean;
+  is_verified: boolean;
 };
 
 export function ProfessionalsAdmin() {
@@ -55,6 +56,16 @@ export function ProfessionalsAdmin() {
       .eq("id", p.id);
     if (error) return toast.error(error.message);
     toast.success(p.is_hidden ? "Profissional exibido" : "Profissional ocultado");
+    load();
+  };
+
+  const toggleVerified = async (p: Professional) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_verified: !p.is_verified })
+      .eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success(p.is_verified ? "Selo removido" : "Selo verificado aplicado");
     load();
   };
 
@@ -107,6 +118,7 @@ export function ProfessionalsAdmin() {
                   <th className="hidden px-4 py-3 sm:table-cell">Local</th>
                   <th className="hidden px-4 py-3 md:table-cell">CNV</th>
                   <th className="hidden px-4 py-3 md:table-cell">Exp.</th>
+                  <th className="px-4 py-3">Selo</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
@@ -124,6 +136,17 @@ export function ProfessionalsAdmin() {
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{[p.city, p.state].filter(Boolean).join(" / ") || "—"}</td>
                     <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{p.cnv_number || "—"}</td>
                     <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{p.experience_years ?? 0}a</td>
+                    <td className="px-4 py-3">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className={p.is_verified ? "text-success bg-success/10 hover:bg-success/20" : "text-muted-foreground hover:bg-muted"}
+                        onClick={() => toggleVerified(p)}
+                      >
+                        <ShieldCheck className={`mr-1.5 h-3.5 w-3.5 ${p.is_verified ? "fill-success/20" : ""}`} />
+                        {p.is_verified ? "Verificado" : "Pendente"}
+                      </Button>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-xs " + (p.is_hidden ? "bg-muted text-muted-foreground" : "bg-emerald-500/15 text-emerald-400")}>
                         {p.is_hidden ? "Oculto" : "Visível"}
@@ -199,6 +222,7 @@ function ProfessionalDialog({
       cnv_number: form.cnv_number ?? null,
       experience_years: Number(form.experience_years) || 0,
       is_hidden: form.is_hidden ?? false,
+      is_verified: form.is_verified ?? false,
     }).eq("id", item.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -222,10 +246,16 @@ function ProfessionalDialog({
             <Field label="Anos de experiência"><Input type="number" value={form.experience_years ?? 0} onChange={(e) => set("experience_years", Number(e.target.value))} /></Field>
           </div>
           <Field label="Bio"><Textarea rows={4} value={form.bio ?? ""} onChange={(e) => set("bio", e.target.value)} /></Field>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.is_hidden ?? false} onChange={(e) => set("is_hidden", e.target.checked)} />
-            Ocultar este perfil da plataforma
-          </label>
+          <div className="flex flex-col gap-3 pt-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_verified ?? false} onChange={(e) => set("is_verified", e.target.checked)} />
+              <ShieldCheck className="h-4 w-4 text-success" /> Selo Verificado FORBIN
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_hidden ?? false} onChange={(e) => set("is_hidden", e.target.checked)} />
+              Ocultar este perfil da plataforma
+            </label>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>

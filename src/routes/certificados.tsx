@@ -12,39 +12,73 @@ export const Route = createFileRoute("/certificados")({
   component: Certificados,
 });
 
-const CERTS = [
-  { id: "c1", course: "Formação de Vigilante", date: "12/03/2025", hours: "200h" },
-  { id: "c2", course: "Reciclagem de Vigilante", date: "08/01/2026", hours: "50h" },
-];
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+
+type Certificate = {
+  id: string;
+  name: string;
+  pdf_url: string;
+  issued_at: string;
+  hours: string | null;
+};
 
 function Certificados() {
+  const { user } = useAuth();
+  const [certs, setCerts] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("user_certificates")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("issued_at", { ascending: false });
+      setCerts((data as Certificate[]) || []);
+      setLoading(false);
+    })();
+  }, [user]);
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="font-display text-3xl font-bold sm:text-4xl">Meus Certificados</h1>
-      <p className="mt-2 text-muted-foreground">Certificados dos cursos online concluídos na plataforma.</p>
+      <p className="mt-2 text-muted-foreground">Certificados individuais cadastrados pelo administrador.</p>
 
-      <div className="mt-8 space-y-4">
-        {CERTS.map((c) => (
-          <div key={c.id} className="flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <GraduationCap className="h-6 w-6" />
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="mt-8 space-y-4">
+          {certs.map((c) => (
+            <div key={c.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 transition hover:border-primary/40">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <GraduationCap className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <h3 className="font-semibold">{c.name}</h3>
+                <p className="text-xs text-muted-foreground">
+                  Emitido em {new Date(c.issued_at).toLocaleDateString("pt-BR")} {c.hours ? `· ${c.hours}` : ""}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="rounded-full">
+                <a href={c.pdf_url} target="_blank" rel="noreferrer">
+                  <Download className="mr-1.5 h-4 w-4" /> Baixar PDF
+                </a>
+              </Button>
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">{c.course}</h3>
-              <p className="text-xs text-muted-foreground">Concluído em {c.date} · {c.hours}</p>
+          ))}
+          {certs.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center">
+              <p className="text-muted-foreground">Você ainda não possui certificados individuais cadastrados.</p>
+              <Button asChild className="mt-4 rounded-full"><Link to="/cursos">Ver cursos disponíveis</Link></Button>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full">
-              <Download className="mr-1.5 h-4 w-4" /> Baixar
-            </Button>
-          </div>
-        ))}
-        {CERTS.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center">
-            <p className="text-muted-foreground">Você ainda não concluiu nenhum curso.</p>
-            <Button asChild className="mt-4 rounded-full"><Link to="/cursos">Ver cursos</Link></Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
