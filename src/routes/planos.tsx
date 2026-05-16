@@ -46,19 +46,84 @@ function pickIcon(slug: string, audience: string) {
   return Zap;
 }
 
+const DEFAULT_PLANS: Plan[] = [
+  {
+    id: "p1",
+    slug: "profissional-mensal",
+    name: "Profissional Mensal",
+    audience: "professional",
+    price_cents: 2790,
+    period: "month",
+    description: "Ideal para quem está buscando novas oportunidades.",
+    features: ["Acesso a todas as vagas", "Candidaturas ilimitadas", "Selo de Profissional Verificado", "Destaque no topo das buscas"],
+    cta_label: "Assinar Mensal",
+    highlight: false,
+    sort_order: 1
+  },
+  {
+    id: "p2",
+    slug: "profissional-anual",
+    name: "Profissional Anual",
+    audience: "professional",
+    price_cents: 29790,
+    period: "year",
+    description: "Economize 10% e garanta sua presença o ano todo.",
+    features: ["Todos os benefícios do Mensal", "Suporte prioritário", "Acesso a cursos exclusivos", "Análise de currículo por especialistas"],
+    cta_label: "Assinar Anual",
+    highlight: true,
+    sort_order: 2
+  },
+  {
+    id: "c1",
+    slug: "empresa-mensal",
+    name: "Empresa Mensal",
+    audience: "company",
+    price_cents: 29790,
+    period: "month",
+    description: "Perfeito para recrutamento pontual e ágil.",
+    features: ["Publicação de até 10 vagas", "Acesso ao banco de profissionais", "Filtros avançados de busca", "Painel de gestão de candidatos"],
+    cta_label: "Começar Agora",
+    highlight: false,
+    sort_order: 3
+  },
+  {
+    id: "c2",
+    slug: "empresa-anual",
+    name: "Empresa Anual",
+    audience: "company",
+    price_cents: 300000,
+    period: "year",
+    description: "Solução completa para grandes operações.",
+    features: ["Publicação de vagas ilimitadas", "Acesso ilimitado ao banco", "API de integração (opcional)", "Gerente de conta dedicado", "Destaque da marca na plataforma"],
+    cta_label: "Assinar Anual",
+    highlight: true,
+    sort_order: 4
+  }
+];
+
 function PlanosPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("plans")
-        .select("*")
-        .eq("is_published", true)
-        .order("sort_order", { ascending: true });
-      setPlans(((data as any) ?? []) as Plan[]);
-      setLoading(false);
+      try {
+        const { data, error } = await supabase
+          .from("plans")
+          .select("*")
+          .eq("is_published", true)
+          .order("sort_order", { ascending: true });
+        
+        if (error || !data || data.length === 0) {
+          setPlans(DEFAULT_PLANS);
+        } else {
+          setPlans(((data as any) ?? []) as Plan[]);
+        }
+      } catch (err) {
+        setPlans(DEFAULT_PLANS);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -88,15 +153,15 @@ function PlanosPage() {
           {professionals.length > 0 && (
             <section className="mt-14">
               <h2 className="mb-6 font-display text-2xl font-bold">Para profissionais</h2>
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
                 {professionals.map((p) => (
                   <PlanCard key={p.id} plan={p} ctaTo="/cadastro" />
                 ))}
-                <div className="rounded-3xl border border-dashed border-border/60 bg-card/40 p-8 lg:col-span-2">
+                <div className="flex flex-col justify-center rounded-3xl border border-dashed border-border/60 bg-card/40 p-8 xl:col-span-1 lg:col-span-2">
                   <h3 className="font-display text-xl font-bold">Por que assinar?</h3>
-                  <p className="mt-3 text-muted-foreground">
+                  <p className="mt-3 text-sm text-muted-foreground">
                     Acesse vagas exclusivas, conteúdo da comunidade e cursos para destacar
-                    seu currículo no mercado de segurança privada.
+                    seu currículo no mercado de segurança privada. Conecte-se com as melhores empresas do Brasil.
                   </p>
                 </div>
               </div>
