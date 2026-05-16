@@ -398,20 +398,48 @@ export function ComposeBox() {
   const imgInput = useRef<HTMLInputElement>(null);
   const vidInput = useRef<HTMLInputElement>(null);
 
-  const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setImage(url);
-    setVideo(null);
+    
+    setLoading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `posts/${user?.id}/img-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("certificates").upload(path, file);
+      if (error) throw error;
+      
+      const { data } = supabase.storage.from("certificates").getPublicUrl(path);
+      setImage(data.publicUrl);
+      setVideo(null);
+      toast.success("Foto carregada!");
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const onPickVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setVideo(url);
-    setImage(null);
+
+    setLoading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `posts/${user?.id}/vid-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("certificates").upload(path, file);
+      if (error) throw error;
+      
+      const { data } = supabase.storage.from("certificates").getPublicUrl(path);
+      setVideo(data.publicUrl);
+      setImage(null);
+      toast.success("Vídeo carregado!");
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reset = () => {
