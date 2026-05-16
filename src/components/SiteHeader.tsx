@@ -30,7 +30,6 @@ const NAV_PROFESSIONAL: NavItem[] = [
   { to: "/feed", label: "Experiências" },
   { to: "/certificados", label: "Certificados" },
   { to: "/candidaturas", label: "Candidaturas" },
-  { to: "/revisor-curriculo", label: "Revisor CV" },
   { to: "/favoritos", label: "Favoritos" },
 ];
 
@@ -38,7 +37,6 @@ const NAV_COMPANY: NavItem[] = [
   { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/vagas", label: "Vagas" },
   { to: "/feed", label: "Experiências" },
-  { to: "/revisor-curriculo", label: "Revisor CV" },
   { to: "/favoritos", label: "Favoritos" },
 ];
 
