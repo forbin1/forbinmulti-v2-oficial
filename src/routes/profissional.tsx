@@ -22,7 +22,7 @@ import {
 import { POSTS } from "@/data/mock";
 import { MentionText } from "@/components/MentionText";
 import { toast } from "sonner";
-import { addPost } from "@/hooks/use-posts";
+import { usePosts, addPost } from "@/hooks/use-posts";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profissional")({
@@ -61,6 +61,8 @@ function PerfilProfissional() {
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  
+  const allPosts = usePosts();
 
   const loadProfile = async () => {
     if (!user) return;
@@ -116,20 +118,21 @@ function PerfilProfissional() {
   if (!profile) return <div className="p-20 text-center">Perfil não encontrado.</div>;
 
   const initials = profile.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const userPosts = allPosts.filter(p => p.author === profile.full_name);
 
   return (
     <div>
-      <div className="group relative h-56 overflow-hidden border-b border-border/60 sm:h-72">
+      <div className="group relative h-64 overflow-hidden border-b border-border/60 sm:h-80 lg:h-96">
         {profile.cover_url ? (
           <img src={profile.cover_url} alt="" className="h-full w-full object-cover" />
         ) : (
-          <>
-            <div className="absolute inset-0 bg-gradient-gold opacity-30" />
-            <div className="absolute inset-0 bg-radial-gold" />
-          </>
+          <div className="absolute inset-0 bg-neutral-900">
+             <div className="absolute inset-0 bg-gradient-gold opacity-10" />
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-primary/10" />
+          </div>
         )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-          <Button variant="secondary" className="rounded-full" onClick={() => coverInputRef.current?.click()} disabled={!!uploading}>
+          <Button variant="secondary" className="rounded-full shadow-lg" onClick={() => coverInputRef.current?.click()} disabled={!!uploading}>
             {uploading === "cover" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
             Alterar Capa
           </Button>
@@ -138,50 +141,50 @@ function PerfilProfissional() {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="-mt-20 rounded-3xl border border-border/60 bg-card/85 p-6 shadow-elevated backdrop-blur-xl backdrop-saturate-150 sm:p-8">
-          <div className="flex flex-wrap items-end gap-6">
-            <div className="group relative">
-              <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl border-4 border-card bg-gradient-gold font-display text-5xl font-extrabold text-primary-foreground shadow-gold">
+        <div className="-mt-32 relative z-10 rounded-3xl border border-white/10 bg-card/70 p-6 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:p-10">
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:text-left text-center">
+            <div className="group relative -mt-10 sm:mt-0">
+              <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-full border-8 border-card bg-gradient-gold font-display text-6xl font-extrabold text-primary-foreground shadow-2xl">
                 {profile.avatar_url ? (
                   <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : initials}
               </div>
               <button 
-                className="absolute inset-0 flex items-center justify-center rounded-3xl bg-black/60 opacity-0 transition group-hover:opacity-100"
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition group-hover:opacity-100"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!!uploading}
               >
-                {uploading === "avatar" ? <Loader2 className="h-6 w-6 animate-spin text-white" /> : <Camera className="h-8 w-8 text-white" />}
+                {uploading === "avatar" ? <Loader2 className="h-8 w-8 animate-spin text-white" /> : <Camera className="h-10 w-10 text-white" />}
               </button>
               <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "avatar")} />
             </div>
 
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{profile.full_name}</h1>
+            <div className="flex-1 pb-2">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <h1 className="font-display text-4xl font-black tracking-tight sm:text-5xl">{profile.full_name}</h1>
                 {profile.is_verified && (
-                  <Badge className="rounded-full border-success/40 bg-success/15 text-success">
-                    <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Verificado FORBIN
+                  <Badge className="rounded-full border-success/40 bg-success/20 text-success px-4 py-1.5 font-bold animate-pulse">
+                    <ShieldCheck className="mr-1.5 h-4 w-4" /> Verificado FORBIN
                   </Badge>
                 )}
               </div>
-              <p className="mt-1 text-lg text-muted-foreground">
-                {profile.role || "Profissional"} {profile.experience_years ? `· ${profile.experience_years} anos de experiência` : ""}
+              <p className="mt-2 text-xl font-medium text-muted-foreground/80">
+                {profile.role || "Profissional de Segurança"} {profile.experience_years ? `· ${profile.experience_years} anos de experiência` : ""}
               </p>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {profile.city && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-primary" /> {profile.city}, {profile.state}</span>}
-                <span className="flex items-center gap-1.5"><Mail className="h-4 w-4 text-primary" /> {user?.email}</span>
-                {profile.phone && <span className="flex items-center gap-1.5"><Phone className="h-4 w-4 text-primary" /> {profile.phone}</span>}
+              <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-2 text-sm font-medium text-muted-foreground/70">
+                {profile.city && <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> {profile.city}, {profile.state}</span>}
+                <span className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {user?.email}</span>
+                {profile.phone && <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> {profile.phone}</span>}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => setIsEditing(true)} variant="outline" className="h-12 rounded-full border-primary/40 hover:bg-primary/5">
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button onClick={() => setIsEditing(true)} variant="outline" className="h-12 rounded-full border-primary/40 bg-primary/5 px-8 font-bold hover:bg-primary/10 transition-all">
                 <Pencil className="mr-2 h-5 w-5" /> Editar Perfil
               </Button>
               {profile.whatsapp && (
-                <Button asChild className="h-12 rounded-full bg-[#25D366] px-6 font-semibold text-white hover:bg-[#1ebe5a]">
+                <Button asChild className="h-12 rounded-full bg-[#25D366] px-8 font-bold text-white shadow-lg shadow-[#25D366]/20 hover:bg-[#1ebe5a] hover:scale-105 transition-all">
                   <a href={`https://wa.me/55${profile.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                    <WhatsAppIcon className="mr-2 h-5 w-5 text-white" /> WhatsApp
+                    <WhatsAppIcon className="mr-2 h-5 w-5" /> WhatsApp
                   </a>
                 </Button>
               )}
@@ -205,9 +208,9 @@ function PerfilProfissional() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
             <Tabs defaultValue="sobre">
-              <TabsList className="flex h-auto w-full flex-wrap gap-1 rounded-2xl bg-card p-1">
-                <TabsTrigger value="sobre" className="flex-1 rounded-xl py-2.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Sobre</TabsTrigger>
-                <TabsTrigger value="feed" className="flex-1 rounded-xl py-2.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Publicações</TabsTrigger>
+              <TabsList className="flex h-auto w-full gap-2 rounded-2xl bg-card/50 p-1.5 backdrop-blur-md">
+                <TabsTrigger value="sobre" className="flex-1 rounded-xl py-3 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Sobre</TabsTrigger>
+                <TabsTrigger value="experiencia" className="flex-1 rounded-xl py-3 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Experiências</TabsTrigger>
               </TabsList>
 
               <TabsContent value="sobre" className="mt-6 space-y-6">
@@ -218,23 +221,42 @@ function PerfilProfissional() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="feed" className="mt-6 space-y-6">
+              <TabsContent value="experiencia" className="mt-8 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ComposeBox />
-                {POSTS.slice(0, 3).map((p, i) => (
-                  <PostCard key={p.id} post={p} owned={i === 0} />
-                ))}
+                {userPosts.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-border/60 p-12 text-center text-muted-foreground bg-card/20">
+                    Nenhuma experiência compartilhada ainda.
+                  </div>
+                ) : (
+                  userPosts.map((p) => (
+                    <PostCard key={p.id} post={p} owned={true} />
+                  ))
+                )}
               </TabsContent>
             </Tabs>
           </div>
 
-          <aside className="space-y-6">
+          <aside className="space-y-8">
             <Card title="Disponibilidade">
-              <div className="space-y-3 text-sm">
-                <Row label="Função" value={profile.role || "—"} />
-                <Row label="Região" value={profile.city || "—"} />
-                <Row label="Disponível" value="Consulte" />
+              <div className="space-y-4 text-sm font-medium">
+                <Row label="Função Atual" value={profile.role || "Não informada"} />
+                <Row label="Região" value={profile.city ? `${profile.city}, ${profile.state}` : "Não informada"} />
+                <Row label="Status" value="Disponível para propostas" />
+                <div className="mt-6 pt-6 border-t border-white/5">
+                   <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary font-bold hover:bg-primary/10" onClick={() => setIsEditing(true)}>
+                     <Pencil className="mr-2 h-3 w-3" /> Editar Disponibilidade
+                   </Button>
+                </div>
               </div>
             </Card>
+
+            <div className="rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 p-8 border border-primary/20">
+              <ShieldCheck className="h-10 w-10 text-primary mb-4" />
+              <h3 className="font-display text-xl font-bold mb-2">Selo de Qualidade</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Este profissional possui certificações validadas pela plataforma FORBIN MultiEmpresas.
+              </p>
+            </div>
           </aside>
         </div>
       </div>
@@ -333,25 +355,25 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
 
 function SocialChip({ icon: Icon, label }: { icon: any; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface px-3 py-1.5 text-xs text-muted-foreground">
-      <Icon className="h-3.5 w-3.5 text-primary" /> {label}
+    <span className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/5 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-default">
+      <Icon className="h-4 w-4" /> {label}
     </span>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="font-display text-2xl font-bold text-primary">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="flex flex-col items-center sm:items-start">
+      <p className="font-display text-3xl font-black text-primary tracking-tighter">{value}</p>
+      <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-1">{label}</p>
     </div>
   );
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-6">
-      <h3 className="mb-4 font-display text-lg font-bold">{title}</h3>
+    <div className="rounded-3xl border border-white/5 bg-card/40 p-8 backdrop-blur-sm">
+      <h3 className="mb-6 font-display text-xl font-bold tracking-tight">{title}</h3>
       {children}
     </div>
   );
@@ -359,9 +381,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold">{value}</span>
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-muted-foreground/80 font-medium">{label}</span>
+      <span className="font-bold text-right">{value}</span>
     </div>
   );
 }
