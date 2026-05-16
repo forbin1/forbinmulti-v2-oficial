@@ -46,6 +46,7 @@ import { POSTS } from "@/data/mock";
 import { MentionText } from "@/components/MentionText";
 import { toast } from "sonner";
 import { addPost } from "@/hooks/use-posts";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/profissional")({
   head: () => ({
@@ -466,6 +467,11 @@ export function ComposeBox() {
     if (vidInput.current) vidInput.current.value = "";
   };
 
+  const { user } = useAuth();
+  const userName = user?.user_metadata?.full_name || "Membro FORBIN";
+  const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const avatarUrl = user?.user_metadata?.avatar_url;
+
   const publish = () => {
     if (!text.trim() && !image && !video) {
       toast.error("Adicione um texto, foto ou vídeo");
@@ -473,9 +479,10 @@ export function ComposeBox() {
     }
     addPost({
       id: `u-${Date.now()}`,
-      author: "Você",
-      role: "Profissional",
-      avatar: "VC",
+      author: userName,
+      role: user?.user_metadata?.role || "Profissional",
+      avatar: initials,
+      avatarUrl: avatarUrl,
       time: "Agora",
       content: text.trim(),
       image: image ?? undefined,
@@ -491,9 +498,16 @@ export function ComposeBox() {
   return (
     <div className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-gold font-bold text-primary-foreground sm:h-12 sm:w-12">
-          CM
-        </div>
+        <Link
+          to="/profissional"
+          className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground sm:h-12 sm:w-12"
+        >
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={userName} className="h-full w-full object-cover" />
+          ) : (
+            initials
+          )}
+        </Link>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -550,7 +564,8 @@ export function ComposeBox() {
   );
 }
 
-export function PostCard({ post, owned = false }: { post: typeof POSTS[number]; owned?: boolean }) {
+export function PostCard({ post, owned = false }: { post: any; owned?: boolean }) {
+  const { user } = useAuth();
   const [content, setContent] = useState(post.content);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.content);
@@ -563,8 +578,10 @@ export function PostCard({ post, owned = false }: { post: typeof POSTS[number]; 
 
   if (deleted) return null;
 
-  const handle = post.author.toLowerCase().replace(/\s+/g, ".");
+  const handle = post.handle || post.author.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ".");
   const totalComments = post.comments + comments.length;
+  const isSelf = owned || (user?.user_metadata?.full_name === post.author);
+  const profileLink = isSelf ? "/profissional" : `/u/${handle}`;
 
   const toggleLike = () => {
     setLiked((prev) => {
@@ -576,7 +593,8 @@ export function PostCard({ post, owned = false }: { post: typeof POSTS[number]; 
   const addComment = () => {
     const text = commentDraft.trim();
     if (!text) return;
-    setComments((c) => [...c, { id: `${Date.now()}`, author: "Você", text }]);
+    const authorName = user?.user_metadata?.full_name || "Você";
+    setComments((c) => [...c, { id: `${Date.now()}`, author: authorName, text }]);
     setCommentDraft("");
   };
 
@@ -584,14 +602,22 @@ export function PostCard({ post, owned = false }: { post: typeof POSTS[number]; 
     <article className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6">
       <header className="flex items-center gap-3">
         <Link
-          to="/u/$handle"
-          params={{ handle }}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-gold font-bold text-primary-foreground transition hover:opacity-90"
+          to={isSelf ? "/profissional" : "/u/$handle"}
+          params={isSelf ? {} : { handle }}
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground transition hover:opacity-90"
         >
-          {post.avatar}
+          {post.avatarUrl ? (
+            <img src={post.avatarUrl} alt={post.author} className="h-full w-full object-cover" />
+          ) : (
+            post.avatar
+          )}
         </Link>
         <div className="min-w-0 flex-1">
-          <Link to="/u/$handle" params={{ handle }} className="block truncate font-semibold hover:underline">
+          <Link 
+            to={isSelf ? "/profissional" : "/u/$handle"} 
+            params={isSelf ? {} : { handle }} 
+            className="block truncate font-semibold hover:underline"
+          >
             {post.author}
           </Link>
           <p className="truncate text-xs text-muted-foreground">{post.role} · {post.time}</p>

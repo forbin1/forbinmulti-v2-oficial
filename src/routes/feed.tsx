@@ -7,6 +7,7 @@ import { ComposeBox, PostCard } from "./profissional";
 import { ADS, AdBanner } from "@/components/AdBanner";
 import { Fragment } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
@@ -30,17 +31,27 @@ function FeedPage() {
 }
 
 function FeedContent() {
+  const { user } = useAuth();
+  const userName = user?.user_metadata?.full_name || "Membro FORBIN";
+  const userRole = user?.user_metadata?.role || "Profissional";
+  const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const avatarUrl = user?.user_metadata?.avatar_url;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
         {/* Esquerda */}
         <aside className="hidden space-y-4 lg:block">
           <div className="rounded-2xl border border-border/60 bg-card p-6 text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-gold font-bold text-primary-foreground text-2xl">
-              CM
+            <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground text-2xl">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={userName} className="h-full w-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
-            <p className="mt-3 font-semibold">Carlos Mendes</p>
-            <p className="text-xs text-muted-foreground">Vigilante Líder</p>
+            <p className="mt-3 font-semibold">{userName}</p>
+            <p className="text-xs text-muted-foreground">{userRole}</p>
             <Button asChild variant="outline" className="mt-4 w-full rounded-full">
               <Link to="/profissional">Ver meu perfil</Link>
             </Button>
