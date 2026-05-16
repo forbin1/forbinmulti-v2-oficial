@@ -422,23 +422,36 @@ export function ComposeBox() {
     if (vidInput.current) vidInput.current.value = "";
   };
 
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const userName = user?.user_metadata?.full_name || "Membro FORBIN";
-  const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const avatarUrl = user?.user_metadata?.avatar_url;
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("full_name, avatar_url, role").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+        if (data) setProfile(data);
+      });
+    }
+  }, [user]);
+
+  const userName = profile?.full_name || user?.user_metadata?.full_name || "Membro FORBIN";
+  const userRole = profile?.role || user?.user_metadata?.role || "Profissional";
+  const initials = userName.split(" ").map((n: any) => n[0]).join("").slice(0, 2).toUpperCase();
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   const publish = async () => {
-    if (!user) return;
+    if (!user || loading) return;
     if (!text.trim() && !image && !video) {
       toast.error("Adicione um texto, foto ou vídeo");
       return;
     }
 
+    setLoading(true);
     try {
       await createPost({
         user_id: user.id,
         author_name: userName,
-        author_role: user?.user_metadata?.role || "Profissional",
+        author_role: userRole,
         author_avatar: avatarUrl || null,
         content: text.trim(),
         image_url: image ?? null,
@@ -448,6 +461,8 @@ export function ComposeBox() {
       reset();
     } catch (err: any) {
       toast.error("Erro ao publicar: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -488,7 +503,9 @@ export function ComposeBox() {
           <Button variant="ghost" size="sm" className="rounded-full text-xs text-muted-foreground" onClick={() => imgInput.current?.click()}>Foto</Button>
           <Button variant="ghost" size="sm" className="rounded-full text-xs text-muted-foreground" onClick={() => vidInput.current?.click()}>Vídeo</Button>
         </div>
-        <Button onClick={publish} className="rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-gold">Publicar</Button>
+        <Button onClick={publish} disabled={loading} className="rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-gold min-w-[100px]">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar"}
+        </Button>
       </div>
     </div>
   );
@@ -500,8 +517,33 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.content);
   const [deleted, setDeleted] = useState(false);
+  const [likes_count, setLikesCount] = useState(post.likes_count || 0);
   const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(post.likes);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("post_likes").select("id").eq("post_id", post.id).eq("user_id", user.id).maybeSingle().then(({ data }) => {
+        setLiked(!!data);
+      });
+    }
+  }, [user, post.id]);
+
+  const toggleLike = async () => {
+    if (!user) return toast.error("Faça login para curtir");
+    
+    if (liked) {
+      await supabase.from("post_likes").delete().eq("post_id", post.id).eq("user_id", user.id);
+      await supabase.from("posts").update({ likes_count: Math.max(0, likes_count - 1) }).eq("id", post.id);
+      setLikesCount(prev => Math.max(0, prev - 1));
+      setLiked(false);
+    } else {
+      await supabase.from("post_likes").insert({ post_id: post.id, user_id: user.id });
+      await supabase.from("posts").update({ likes_count: likes_count + 1 }).eq("id", post.id);
+      setLikesCount(prev => prev + 1);
+      setLiked(true);
+    }
+  };
+
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<{ id: string; author: string; text: string }[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
@@ -510,13 +552,6 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
 
   const totalComments = (post.comments_count || 0) + comments.length;
   const isSelf = user?.id === post.user_id;
-
-  const toggleLike = () => {
-    setLiked((prev) => {
-      setLikes((l) => l + (prev ? -1 : 1));
-      return !prev;
-    });
-  };
 
   const addComment = () => {
     const text = commentDraft.trim();
@@ -577,7 +612,7 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
       {post.video_url && <video src={post.video_url} controls playsInline className="mt-4 w-full rounded-xl border border-border/60 bg-black" />}
       <footer className="mt-5 flex items-center gap-2 border-t border-border/60 pt-4 text-sm text-muted-foreground">
         <Button variant="ghost" size="sm" onClick={toggleLike} className={`rounded-full ${liked ? "text-primary" : ""}`}>
-          <Heart className={`mr-2 h-4 w-4 ${liked ? "fill-primary" : ""}`} /> {likes + (post.likes_count || 0)}
+          <Heart className={`mr-2 h-4 w-4 ${liked ? "fill-primary" : ""}`} /> {likes_count}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setShowComments((s) => !s)} className="rounded-full">
           <MessageCircle className="mr-2 h-4 w-4" /> {totalComments}
