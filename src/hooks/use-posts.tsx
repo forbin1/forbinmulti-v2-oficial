@@ -26,12 +26,17 @@ export function usePosts() {
 
   const loadPosts = async () => {
     setLoading(true);
+    console.log("Iniciando carregamento de posts...");
     const { data, error } = await supabase
       .from("posts")
-      .select("*, profiles(full_name, avatar_url, role)")
+      .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
+    if (error) {
+      console.error("Erro ao carregar posts:", error);
+      toast.error("Erro ao carregar feed: " + error.message);
+    } else if (data) {
+      console.log("Posts carregados com sucesso:", data.length);
       setPosts(data as DbPost[]);
     }
     setLoading(false);
