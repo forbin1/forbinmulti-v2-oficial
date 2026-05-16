@@ -110,15 +110,6 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          {user && (
-            <Link
-              to={dashboardLink}
-              activeProps={{ className: "text-primary bg-accent/60" }}
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {dashboardLabel}
-            </Link>
-          )}
         </nav>
 
         <div className="ml-auto hidden items-center gap-3 md:flex">
