@@ -26,11 +26,18 @@ function Candidaturas() {
       const loadApps = async () => {
         const { data, error } = await supabase
           .from("applications")
-          .select("id, status, created_at, jobs(id, title), companies(company_name)")
+          .select("id, status, created_at, jobs(id, title, companies(company_name))")
           .eq("professional_id", user.id)
           .order("created_at", { ascending: false });
         
-        if (data) setApps(data);
+        if (error) {
+          console.error("Error fetching applications:", error);
+        }
+        
+        if (data) {
+          // Since companies join might fail due to foreign key, let's fetch companies manually or just rely on jobs.companies
+          setApps(data);
+        }
         setLoading(false);
       };
       loadApps();
@@ -66,7 +73,7 @@ function Candidaturas() {
                   </Link>
                   <Badge variant="outline" className="text-xs uppercase bg-surface text-muted-foreground">{a.status}</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{a.companies?.company_name || "Empresa Desconhecida"}</p>
+                <p className="text-sm text-muted-foreground">{a.jobs?.companies?.company_name || "Empresa Desconhecida"}</p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" /> {a.created_at ? formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: ptBR }) : "Agora"}
                 </p>

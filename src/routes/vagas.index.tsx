@@ -20,9 +20,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/vagas-hero.jpg";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
-
-const fetchMappedJobs = async () => {
-  const { data, error } = await supabase
+const fetchJobsFromServer = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
+  const { data, error } = await supabaseAdmin
     .from("jobs")
     .select("id, title, city, state, contract_type, modality, salary_min, salary_max, requirements, banner_url, created_at, companies(company_name, logo_url, username), applications(count)")
     .eq("is_published", true)
@@ -52,7 +53,7 @@ const fetchMappedJobs = async () => {
     requirements: j.requirements ? j.requirements.split(",") : [],
     cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
   }));
-};
+});
 export const Route = createFileRoute("/vagas/")({
   head: () => ({
     meta: [
@@ -79,14 +80,14 @@ function VagasPage() {
   useEffect(() => {
     const fetchInitial = async () => {
       setIsLoading(true);
-      const jobs = await fetchMappedJobs();
+      const jobs = await fetchJobsFromServer();
       setRealJobs(jobs);
       setIsLoading(false);
     };
     fetchInitial();
 
     const refreshJobs = async () => {
-      const jobs = await fetchMappedJobs();
+      const jobs = await fetchJobsFromServer();
       setRealJobs(jobs);
     };
 
