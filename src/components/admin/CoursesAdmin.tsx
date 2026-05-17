@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { createServerFn } from "@tanstack/react-start";
 import { Pencil, Trash2, Eye, EyeOff, Plus, GraduationCap, Loader2, Layers, Upload, FileText } from "lucide-react";
 import { ModulesManager } from "@/components/admin/ModulesManager";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,58 +64,17 @@ const EMPTY: Omit<Course, "id"> = {
   commission_percentage: 0,
 };
 
-const createCourseServer = createServerFn({ method: "POST" })
-  .validator((d: any) => d)
-  .handler(async ({ data: payload }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("courses")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data;
-  });
-
-const updateCourseServer = createServerFn({ method: "POST" })
-  .validator((d: { id: string; payload: any }) => d)
-  .handler(async ({ data: { id, payload } }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("courses")
-      .update(payload)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data;
-  });
-
-const deleteCourseServer = createServerFn({ method: "POST" })
-  .validator((id: string) => id)
-  .handler(async ({ data: id }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("courses")
-      .delete()
-      .eq("id", id);
-    if (error) throw new Error(error.message);
-    return { success: true };
-  });
-
-const toggleCoursePublishedServer = createServerFn({ method: "POST" })
-  .validator((d: { id: string; is_published: boolean }) => d)
-  .handler(async ({ data: { id, is_published } }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("courses")
-      .update({ is_published })
-      .eq("id", id);
-    if (error) throw new Error(error.message);
-    return { success: true };
-  });
-
-export function CoursesAdmin() {
+export function CoursesAdmin({
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  toggleCoursePublished,
+}: {
+  createCourse: (payload: any) => Promise<any>;
+  updateCourse: (payload: { id: string; payload: any }) => Promise<any>;
+  deleteCourse: (id: string) => Promise<any>;
+  toggleCoursePublished: (payload: { id: string; is_published: boolean }) => Promise<any>;
+}) {
   const [items, setItems] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Course | null>(null);
@@ -141,7 +99,7 @@ export function CoursesAdmin() {
 
   const togglePublished = async (c: Course) => {
     try {
-      await toggleCoursePublishedServer({ data: { id: c.id, is_published: !c.is_published } });
+      await toggleCoursePublished({ id: c.id, is_published: !c.is_published });
       toast.success(c.is_published ? "Curso ocultado" : "Curso publicado");
       load();
     } catch (err: any) {
@@ -151,7 +109,7 @@ export function CoursesAdmin() {
 
   const remove = async (id: string) => {
     try {
-      await deleteCourseServer({ data: id });
+      await deleteCourse(id);
       toast.success("Curso excluído");
       setDeleteId(null);
       load();
@@ -252,6 +210,8 @@ export function CoursesAdmin() {
           setEditing(null);
           load();
         }}
+        createCourse={createCourse}
+        updateCourse={updateCourse}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
@@ -285,11 +245,15 @@ function CourseDialog({
   course,
   onClose,
   onSaved,
+  createCourse,
+  updateCourse,
 }: {
   open: boolean;
   course: Course | null;
   onClose: () => void;
   onSaved: () => void;
+  createCourse: (payload: any) => Promise<any>;
+  updateCourse: (payload: { id: string; payload: any }) => Promise<any>;
 }) {
   const [form, setForm] = useState<Omit<Course, "id">>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -396,9 +360,9 @@ function CourseDialog({
 
     try {
       if (course) {
-        await updateCourseServer({ data: { id: course.id, payload } });
+        await updateCourse({ id: course.id, payload });
       } else {
-        await createCourseServer({ data: payload });
+        await createCourse(payload);
       }
       setSaving(false);
       toast.success(course ? "Curso atualizado" : "Curso criado");

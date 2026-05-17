@@ -1,8 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CoursesAdmin } from "@/components/admin/CoursesAdmin";
 import { createServerFn } from "@tanstack/react-start";
 
-const createCourseServer = createServerFn({ method: "POST" })
+export const createCourseServer = createServerFn({ method: "POST" })
   .validator((d: any) => d)
   .handler(async ({ data: payload }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -15,7 +13,7 @@ const createCourseServer = createServerFn({ method: "POST" })
     return data;
   });
 
-const updateCourseServer = createServerFn({ method: "POST" })
+export const updateCourseServer = createServerFn({ method: "POST" })
   .validator((d: { id: string; payload: any }) => d)
   .handler(async ({ data: { id, payload } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -29,7 +27,7 @@ const updateCourseServer = createServerFn({ method: "POST" })
     return data;
   });
 
-const deleteCourseServer = createServerFn({ method: "POST" })
+export const deleteCourseServer = createServerFn({ method: "POST" })
   .validator((id: string) => id)
   .handler(async ({ data: id }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -41,7 +39,7 @@ const deleteCourseServer = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-const toggleCoursePublishedServer = createServerFn({ method: "POST" })
+export const toggleCoursePublishedServer = createServerFn({ method: "POST" })
   .validator((d: { id: string; is_published: boolean }) => d)
   .handler(async ({ data: { id, is_published } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -52,14 +50,3 @@ const toggleCoursePublishedServer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
-
-export const Route = createFileRoute("/admin/cursos")({
-  component: () => (
-    <CoursesAdmin
-      createCourse={createCourseServer}
-      updateCourse={updateCourseServer}
-      deleteCourse={deleteCourseServer}
-      toggleCoursePublished={toggleCoursePublishedServer}
-    />
-  ),
-});
