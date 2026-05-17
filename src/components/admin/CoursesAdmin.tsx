@@ -70,10 +70,10 @@ export function CoursesAdmin({
   deleteCourse,
   toggleCoursePublished,
 }: {
-  createCourse: (payload: any) => Promise<any>;
-  updateCourse: (payload: { id: string; payload: any }) => Promise<any>;
-  deleteCourse: (id: string) => Promise<any>;
-  toggleCoursePublished: (payload: { id: string; is_published: boolean }) => Promise<any>;
+  createCourse: (args: { data: any }) => Promise<any>;
+  updateCourse: (args: { data: { id: string; payload: any } }) => Promise<any>;
+  deleteCourse: (args: { data: string }) => Promise<any>;
+  toggleCoursePublished: (args: { data: { id: string; is_published: boolean } }) => Promise<any>;
 }) {
   const [items, setItems] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +99,7 @@ export function CoursesAdmin({
 
   const togglePublished = async (c: Course) => {
     try {
-      await toggleCoursePublished({ id: c.id, is_published: !c.is_published });
+      await toggleCoursePublished({ data: { id: c.id, is_published: !c.is_published } });
       toast.success(c.is_published ? "Curso ocultado" : "Curso publicado");
       load();
     } catch (err: any) {
@@ -109,7 +109,7 @@ export function CoursesAdmin({
 
   const remove = async (id: string) => {
     try {
-      await deleteCourse(id);
+      await deleteCourse({ data: id });
       toast.success("Curso excluído");
       setDeleteId(null);
       load();
@@ -252,8 +252,8 @@ function CourseDialog({
   course: Course | null;
   onClose: () => void;
   onSaved: () => void;
-  createCourse: (payload: any) => Promise<any>;
-  updateCourse: (payload: { id: string; payload: any }) => Promise<any>;
+  createCourse: (args: { data: any }) => Promise<any>;
+  updateCourse: (args: { data: { id: string; payload: any } }) => Promise<any>;
 }) {
   const [form, setForm] = useState<Omit<Course, "id">>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -360,9 +360,9 @@ function CourseDialog({
 
     try {
       if (course) {
-        await updateCourse({ id: course.id, payload });
+        await updateCourse({ data: { id: course.id, payload } });
       } else {
-        await createCourse(payload);
+        await createCourse({ data: payload });
       }
       setSaving(false);
       toast.success(course ? "Curso atualizado" : "Curso criado");
