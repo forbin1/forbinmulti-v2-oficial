@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Briefcase,
   Users,
@@ -38,9 +38,21 @@ export const Route = createFileRoute("/perfil-empresa")({
 
 function PerfilEmpresa() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [company, setCompany] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Redirect if company has username!
+  useEffect(() => {
+    if (company?.username) {
+      navigate({
+        to: "/empresa/$username",
+        params: { username: company.username },
+        replace: true
+      });
+    }
+  }, [company, navigate]);
 
   // Simulated posts for "Publicações" tab
   const [posts, setPosts] = useState<any[]>([
