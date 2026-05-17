@@ -52,47 +52,7 @@ const fetchMappedJobs = async () => {
     requirements: j.requirements ? j.requirements.split(",") : [],
     cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
   }));
-};
-
-const getJobs = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("jobs")
-    .select("*, companies(*), applications(count)")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false });
-
-  if (error || !data) return [];
-
-  return data.map((j: any) => ({
-    id: j.id,
-    title: j.title,
-    company: j.companies?.company_name || "Empresa FORBIN",
-    companyInitials: j.companies?.company_name?.charAt(0) || "E",
-    companyLogo: j.companies?.logo_url || null,
-    companyUsername: j.companies?.username || null,
-    location: `${j.city || "Brasil"}, ${j.state || ""}`,
-    type: j.contract_type || "CLT",
-    shift: j.modality || "Presencial",
-    salary: (() => {
-      const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
-      if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
-      if (j.salary_min) return fmt(j.salary_min);
-      if (j.salary_max) return fmt(j.salary_max);
-      return "A combinar";
-    })(),
-    posted: "Recém criada",
-    applicants: j.applications?.[0]?.count || 0,
-    requirements: j.requirements ? j.requirements.split(",") : [],
-    cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
-  }));
-});
-
 export const Route = createFileRoute("/vagas/")({
-  loader: async () => {
-    const initialJobs = await getJobs();
-    return { initialJobs };
-  },
   head: () => ({
     meta: [
       { title: "Vagas — FORBIN MultiEmpresas" },
@@ -106,16 +66,24 @@ const REGIONS = ["Todas", "São Paulo", "Rio de Janeiro", "Minas Gerais", "Paran
 const TYPES = ["Todos", "CLT", "PJ", "Diária", "Temporário"] as const;
 
 function VagasPage() {
-  const { initialJobs } = Route.useLoaderData();
   const { user, loading } = useAuth();
   const [region, setRegion] = useState("Todas");
   const [query, setQuery] = useState("");
   const [type, setType] = useState<(typeof TYPES)[number]>("Todos");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [realJobs, setRealJobs] = useState<any[]>(initialJobs);
+  const [realJobs, setRealJobs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const fetchInitial = async () => {
+      setIsLoading(true);
+      const jobs = await fetchMappedJobs();
+      setRealJobs(jobs);
+      setIsLoading(false);
+    };
+    fetchInitial();
+
     const refreshJobs = async () => {
       const jobs = await fetchMappedJobs();
       setRealJobs(jobs);
@@ -177,7 +145,7 @@ function VagasPage() {
                 Encontre sua próxima vaga
               </h1>
               <p className="mt-2 max-w-xl text-xs text-white/80 sm:mt-3 sm:text-base">
-                {JOBS.length} vagas ativas em todo o Brasil para profissionais de segurança privada.
+                Vagas ativas em todo o Brasil para profissionais de segurança privada.
               </p>
             </div>
           </div>
@@ -303,70 +271,88 @@ function VagasPage() {
         </div>
 
         <SubscriptionGuard feature="ver e se candidatar a vagas">
-          <p className="mb-6 text-sm text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "vaga encontrada" : "vagas encontradas"}
-          </p>
-
-          <div className="relative">
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((job, idx) => (
-                <Fragment key={job.id}>
-                  <Link
-                    to="/vagas/$jobId"
-                    params={{ jobId: job.id }}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/50 hover:shadow-gold"
-                  >
-                    {/* Cover 16:9 */}
-                    <div className="relative aspect-video w-full overflow-hidden">
-                      <img
-                        src={job.cover}
-                        alt={job.title}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                      <Badge className="absolute right-3 top-3 rounded-full bg-black/60 text-xs text-white backdrop-blur">
-                        {job.type}
-                      </Badge>
-                      <div className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-primary text-sm font-bold text-primary-foreground shadow-lg">
-                        {job.companyLogo ? (
-                          <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover" />
-                        ) : (
-                          job.companyInitials
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-1 flex-col p-5">
-                      <h3 className="text-lg font-semibold leading-tight transition group-hover:text-primary">
-                        {job.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">{job.company}</p>
-                      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span>📍 {job.location}</span>
-                        <span>⏱ {job.shift}</span>
-                      </div>
-                      <p className="mt-2 text-sm font-semibold text-primary">{job.salary}</p>
-                      <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-4 text-xs">
-                        <span className="text-muted-foreground">{job.posted}</span>
-                        <span className="font-semibold text-primary">{job.applicants} candidatos</span>
-                      </div>
-                    </div>
-                  </Link>
-                  {(idx + 1) % 5 === 0 && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <AdBanner ad={ADS[Math.floor(idx / 5) % ADS.length]} />
-                    </div>
-                  )}
-                </Fragment>
+          {isLoading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className="animate-pulse rounded-3xl border border-border/60 bg-card overflow-hidden">
+                  <div className="h-40 w-full bg-surface/80"></div>
+                  <div className="p-5">
+                    <div className="h-6 w-3/4 rounded bg-surface/80 mb-3"></div>
+                    <div className="h-4 w-1/2 rounded bg-surface/80 mb-6"></div>
+                    <div className="h-5 w-1/3 rounded bg-surface/80 mb-6"></div>
+                    <div className="h-4 w-full rounded bg-surface/80 mt-10"></div>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <>
+              <p className="mb-6 text-sm text-muted-foreground">
+                {filtered.length} {filtered.length === 1 ? "vaga encontrada" : "vagas encontradas"}
+              </p>
 
-          {filtered.length === 0 && (
-            <div className="mt-10 rounded-3xl border border-dashed border-border/60 bg-card p-16 text-center">
-              <p className="text-lg text-muted-foreground">Nenhuma vaga encontrada com esses filtros.</p>
-            </div>
+              <div className="relative">
+                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {filtered.map((job, idx) => (
+                    <Fragment key={job.id}>
+                      <Link
+                        to="/vagas/$jobId"
+                        params={{ jobId: job.id }}
+                        className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/50 hover:shadow-gold"
+                      >
+                        {/* Cover 16:9 */}
+                        <div className="relative aspect-video w-full overflow-hidden">
+                          <img
+                            src={job.cover}
+                            alt={job.title}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                          <Badge className="absolute right-3 top-3 rounded-full bg-black/60 text-xs text-white backdrop-blur">
+                            {job.type}
+                          </Badge>
+                          <div className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-primary text-sm font-bold text-primary-foreground shadow-lg">
+                            {job.companyLogo ? (
+                              <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover" />
+                            ) : (
+                              job.companyInitials
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-1 flex-col p-5">
+                          <h3 className="text-lg font-semibold leading-tight transition group-hover:text-primary">
+                            {job.title}
+                          </h3>
+                          <p className="mt-1 text-sm text-muted-foreground">{job.company}</p>
+                          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            <span>📍 {job.location}</span>
+                            <span>⏱ {job.shift}</span>
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-primary">{job.salary}</p>
+                          <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-4 text-xs">
+                            <span className="text-muted-foreground">{job.posted}</span>
+                            <span className="font-semibold text-primary">{job.applicants} candidatos</span>
+                          </div>
+                        </div>
+                      </Link>
+                      {(idx + 1) % 5 === 0 && (
+                        <div className="md:col-span-2 lg:col-span-3">
+                          <AdBanner ad={ADS[Math.floor(idx / 5) % ADS.length]} />
+                        </div>
+                      )}
+                    </Fragment>
+                  ))}
+                </div>
+              </div>
+
+              {filtered.length === 0 && (
+                <div className="mt-10 rounded-3xl border border-dashed border-border/60 bg-card p-16 text-center">
+                  <p className="text-lg text-muted-foreground">Nenhuma vaga encontrada com esses filtros.</p>
+                </div>
+              )}
+            </>
           )}
         </SubscriptionGuard>
       </div>
