@@ -33,7 +33,6 @@ const TYPES = ["Todos", "CLT", "PJ", "Diária", "Temporário"] as const;
 
 function VagasPage() {
   const { user, loading } = useAuth();
-  const isLocked = !loading && !user;
   const [region, setRegion] = useState("Todas");
   const [query, setQuery] = useState("");
   const [type, setType] = useState<(typeof TYPES)[number]>("Todos");
@@ -211,7 +210,7 @@ function VagasPage() {
         </p>
 
         <div className="relative">
-          <div className={`grid gap-5 md:grid-cols-2 lg:grid-cols-3 ${isLocked ? "pointer-events-none select-none blur-md" : ""}`}>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((job, idx) => (
               <Fragment key={job.id}>
                 <Link
@@ -261,27 +260,7 @@ function VagasPage() {
             ))}
           </div>
 
-          {isLocked && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="mx-4 max-w-md rounded-3xl border border-border/60 bg-card/95 p-8 text-center shadow-2xl backdrop-blur">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                  <Lock className="h-6 w-6" />
-                </div>
-                <h3 className="mt-4 font-display text-xl font-bold">Vagas exclusivas para membros</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Cadastre-se ou faça login para ver todas as vagas e se candidatar.
-                </p>
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                  <Button asChild className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                    <Link to="/planos">Cadastrar</Link>
-                  </Button>
-                  <Button asChild variant="outline" className="rounded-full">
-                    <Link to="/login">Entrar</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {filtered.length === 0 && (

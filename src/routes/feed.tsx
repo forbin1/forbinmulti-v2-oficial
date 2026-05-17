@@ -20,14 +20,7 @@ export const Route = createFileRoute("/feed")({
 });
 
 function FeedPage() {
-  return (
-    <RequireAuth
-      title="Experiências exclusivas para membros"
-      description="Aqui profissionais e empresas compartilham experiências do dia a dia. Cadastre-se grátis para participar."
-    >
-      <FeedContent />
-    </RequireAuth>
-  );
+  return <FeedContent />;
 }
 
 function FeedContent() {
@@ -55,7 +48,25 @@ function FeedContent() {
         {/* Centro — feed */}
         <div className="min-w-0 space-y-6 relative">
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Experiências</h1>
-          <ComposeBox />
+          
+          {user ? (
+            <ComposeBox />
+          ) : (
+            <div className="rounded-3xl border border-border/60 bg-card p-6 text-center shadow-sm">
+              <h3 className="font-display text-xl font-bold">Faça login para compartilhar</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Junte-se à comunidade FORBIN para publicar suas experiências e interagir.
+              </p>
+              <div className="mt-5 flex items-center justify-center gap-3">
+                <Button asChild className="rounded-full bg-primary text-primary-foreground shadow-gold hover:bg-primary/90">
+                  <Link to="/planos">Criar conta</Link>
+                </Button>
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link to="/login">Entrar</Link>
+                </Button>
+              </div>
+            </div>
+          )}
           
           <FeedList />
         </div>
