@@ -35,6 +35,7 @@ const NAV_PROFESSIONAL: NavItem[] = [
 ];
 
 const NAV_COMPANY: NavItem[] = [
+  { to: "/empresa", label: "Painel Empresa" },
   { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/vagas", label: "Vagas" },
   { to: "/feed", label: "Experiências" },
