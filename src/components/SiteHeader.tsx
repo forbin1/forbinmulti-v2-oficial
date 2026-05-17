@@ -42,6 +42,7 @@ const NAV_COMPANY: NavItem[] = [
 ];
 
 const NAV_ADMIN: NavItem[] = [
+  { to: "/admin", label: "Painel Admin" },
   { to: "/vagas", label: "Vagas" },
   { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/feed", label: "Experiências" },
