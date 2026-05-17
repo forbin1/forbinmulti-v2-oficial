@@ -20,7 +20,44 @@ import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/vagas-hero.jpg";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
+const fetchMappedJobs = async () => {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*, companies(*), applications(count)")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((j: any) => ({
+    id: j.id,
+    title: j.title,
+    company: j.companies?.company_name || "Empresa FORBIN",
+    companyInitials: j.companies?.company_name?.charAt(0) || "E",
+    companyLogo: j.companies?.logo_url || null,
+    companyUsername: j.companies?.username || null,
+    location: `${j.city || "Brasil"}, ${j.state || ""}`,
+    type: j.contract_type || "CLT",
+    shift: j.modality || "Presencial",
+    salary: (() => {
+      const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+      if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
+      if (j.salary_min) return fmt(j.salary_min);
+      if (j.salary_max) return fmt(j.salary_max);
+      return "A combinar";
+    })(),
+    posted: "Recém criada",
+    applicants: j.applications?.[0]?.count || 0,
+    requirements: j.requirements ? j.requirements.split(",") : [],
+    cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
+  }));
+};
+
 export const Route = createFileRoute("/vagas/")({
+  loader: async () => {
+    const initialJobs = await fetchMappedJobs();
+    return { initialJobs };
+  },
   head: () => ({
     meta: [
       { title: "Vagas — FORBIN MultiEmpresas" },
@@ -34,55 +71,20 @@ const REGIONS = ["Todas", "São Paulo", "Rio de Janeiro", "Minas Gerais", "Paran
 const TYPES = ["Todos", "CLT", "PJ", "Diária", "Temporário"] as const;
 
 function VagasPage() {
+  const { initialJobs } = Route.useLoaderData();
   const { user, loading } = useAuth();
   const [region, setRegion] = useState("Todas");
   const [query, setQuery] = useState("");
   const [type, setType] = useState<(typeof TYPES)[number]>("Todos");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [realJobs, setRealJobs] = useState<any[]>([]);
+  const [realJobs, setRealJobs] = useState<any[]>(initialJobs);
 
   useEffect(() => {
-    const fetchRealJobs = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("jobs")
-          .select("*, companies(*), applications(count)")
-          .eq("is_published", true)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        if (data) {
-          const mapped = data.map((j: any) => ({
-            id: j.id,
-            title: j.title,
-            company: j.companies?.company_name || "Empresa FORBIN",
-            companyInitials: j.companies?.company_name?.charAt(0) || "E",
-            companyLogo: j.companies?.logo_url || null,
-            companyUsername: j.companies?.username || null,
-            location: `${j.city || "Brasil"}, ${j.state || ""}`,
-            type: j.contract_type || "CLT",
-            shift: j.modality || "Presencial",
-            salary: (() => {
-              const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
-              if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
-              if (j.salary_min) return fmt(j.salary_min);
-              if (j.salary_max) return fmt(j.salary_max);
-              return "A combinar";
-            })(),
-            posted: "Recém criada",
-            applicants: j.applications?.[0]?.count || 0,
-            requirements: j.requirements ? j.requirements.split(",") : [],
-            cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
-          }));
-          setRealJobs(mapped);
-        }
-      } catch (err) {
-        console.error("Erro ao carregar vagas do banco:", err);
-      }
+    const refreshJobs = async () => {
+      const jobs = await fetchMappedJobs();
+      setRealJobs(jobs);
     };
-
-    fetchRealJobs();
 
     // Realtime: new jobs appear instantly!
     const channel = supabase
@@ -90,7 +92,7 @@ function VagasPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "jobs" },
-        () => { fetchRealJobs(); }
+        () => { refreshJobs(); }
       )
       .subscribe();
 
