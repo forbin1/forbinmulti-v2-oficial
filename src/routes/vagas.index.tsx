@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { useState, Fragment, useEffect } from "react";
 import { MapPin, Search, SlidersHorizontal, Briefcase, Building2, Lock, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -53,9 +54,43 @@ const fetchMappedJobs = async () => {
   }));
 };
 
+const getJobs = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("jobs")
+    .select("*, companies(*), applications(count)")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((j: any) => ({
+    id: j.id,
+    title: j.title,
+    company: j.companies?.company_name || "Empresa FORBIN",
+    companyInitials: j.companies?.company_name?.charAt(0) || "E",
+    companyLogo: j.companies?.logo_url || null,
+    companyUsername: j.companies?.username || null,
+    location: `${j.city || "Brasil"}, ${j.state || ""}`,
+    type: j.contract_type || "CLT",
+    shift: j.modality || "Presencial",
+    salary: (() => {
+      const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+      if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
+      if (j.salary_min) return fmt(j.salary_min);
+      if (j.salary_max) return fmt(j.salary_max);
+      return "A combinar";
+    })(),
+    posted: "Recém criada",
+    applicants: j.applications?.[0]?.count || 0,
+    requirements: j.requirements ? j.requirements.split(",") : [],
+    cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
+  }));
+});
+
 export const Route = createFileRoute("/vagas/")({
   loader: async () => {
-    const initialJobs = await fetchMappedJobs();
+    const initialJobs = await getJobs();
     return { initialJobs };
   },
   head: () => ({
