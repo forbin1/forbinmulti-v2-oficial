@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Briefcase, Users, Calendar, TrendingUp, Plus, MoreVertical, Loader2, Save, X } from "lucide-react";
+import { Briefcase, Users, Calendar, TrendingUp, Plus, MoreVertical, Loader2, Save, X, Pencil, Trash2, EyeOff, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
@@ -22,6 +22,8 @@ function EmpresaDashboard() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingJob, setEditingJob] = useState<any>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -104,6 +106,36 @@ function EmpresaDashboard() {
   useEffect(() => {
     loadData();
   }, [user]);
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingJob) return;
+    try {
+      setEditSaving(true);
+      const { error } = await supabase.from("jobs").update({
+        title: editingJob.title,
+        description: editingJob.description,
+        city: editingJob.city,
+        state: editingJob.state,
+        modality: editingJob.modality,
+        contract_type: editingJob.contract_type,
+        salary_min: editingJob.salary_min ? parseFloat(editingJob.salary_min) : null,
+        salary_max: editingJob.salary_max ? parseFloat(editingJob.salary_max) : null,
+        requirements: editingJob.requirements,
+        benefits: editingJob.benefits,
+        banner_url: editingJob.banner_url || null,
+        is_published: editingJob.is_published,
+      }).eq("id", editingJob.id);
+      if (error) throw error;
+      toast.success("Vaga atualizada com sucesso!");
+      setEditingJob(null);
+      loadData();
+    } catch (err: any) {
+      toast.error("Erro ao atualizar: " + err.message);
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,20 +261,28 @@ function EmpresaDashboard() {
                       else { toast.success(j.is_published ? "Vaga pausada" : "Vaga ativada"); loadData(); }
                     }}
                   >
-                    {j.is_published ? <X className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                    {j.is_published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Editar vaga"
+                    onClick={() => setEditingJob({ ...j })}
+                  >
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     title="Excluir"
                     onClick={async () => {
-                      if (!confirm("Excluir esta vaga?")) return;
+                      if (!confirm("Tem certeza que deseja excluir esta vaga?")) return;
                       const { error } = await supabase.from("jobs").delete().eq("id", j.id);
                       if (error) toast.error(error.message);
-                      else { toast.success("Vaga excluída"); loadData(); }
+                      else { toast.success("Vaga excluída!"); loadData(); }
                     }}
                   >
-                    <MoreVertical className="h-5 w-5 text-destructive" />
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -357,6 +397,105 @@ function EmpresaDashboard() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit job dialog */}
+      <Dialog open={!!editingJob} onOpenChange={(o) => !o && setEditingJob(null)}>
+        <DialogContent className="max-w-2xl bg-card border-border/60 text-foreground overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl font-bold">Editar Vaga</DialogTitle>
+          </DialogHeader>
+          {editingJob && (
+            <form onSubmit={handleEditSave} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Título da Vaga *</Label>
+                  <Input value={editingJob.title} onChange={(e) => setEditingJob((j: any) => ({ ...j, title: e.target.value }))} required className="bg-surface" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cidade</Label>
+                  <Input value={editingJob.city || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, city: e.target.value }))} className="bg-surface" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado</Label>
+                  <Input value={editingJob.state || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, state: e.target.value }))} className="bg-surface" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Modalidade</Label>
+                  <select value={editingJob.modality} onChange={(e) => setEditingJob((j: any) => ({ ...j, modality: e.target.value }))} className="h-10 w-full rounded-xl border border-border bg-surface px-3">
+                    <option>Presencial</option>
+                    <option>Híbrido</option>
+                    <option>Remoto</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Regime de Contrato</Label>
+                  <select value={editingJob.contract_type} onChange={(e) => setEditingJob((j: any) => ({ ...j, contract_type: e.target.value }))} className="h-10 w-full rounded-xl border border-border bg-surface px-3">
+                    <option>CLT</option>
+                    <option>PJ</option>
+                    <option>Temporário</option>
+                    <option>Freelancer</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Salário Mínimo (R$)</Label>
+                  <Input type="number" value={editingJob.salary_min || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, salary_min: e.target.value }))} className="bg-surface" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Salário Máximo (R$)</Label>
+                  <Input type="number" value={editingJob.salary_max || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, salary_max: e.target.value }))} className="bg-surface" />
+                </div>
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Descrição da Vaga</Label>
+                  <Textarea value={editingJob.description || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, description: e.target.value }))} rows={3} className="bg-surface" />
+                </div>
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Requisitos</Label>
+                  <Textarea value={editingJob.requirements || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, requirements: e.target.value }))} rows={3} className="bg-surface" />
+                </div>
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Benefícios</Label>
+                  <Textarea value={editingJob.benefits || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, benefits: e.target.value }))} rows={2} className="bg-surface" />
+                </div>
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Banner da Vaga (URL ou upload)</Label>
+                  <div className="flex gap-2">
+                    <Input value={editingJob.banner_url || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, banner_url: e.target.value }))} placeholder="Cole um link ou selecione abaixo" className="bg-surface flex-1" />
+                  </div>
+                  <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 p-3 bg-surface/50">
+                    <Input type="file" accept="image/*" className="hidden" id="edit-banner-upload" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setEditingJob((j: any) => ({ ...j, banner_url: reader.result as string }));
+                      reader.readAsDataURL(file);
+                    }} />
+                    <Label htmlFor="edit-banner-upload" className="flex h-14 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
+                      Selecionar
+                    </Label>
+                    {editingJob.banner_url && (
+                      <div className="h-14 w-24 overflow-hidden rounded-lg border">
+                        <img src={editingJob.banner_url} alt="Preview" className="h-full w-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={editingJob.is_published} onChange={(e) => setEditingJob((j: any) => ({ ...j, is_published: e.target.checked }))} />
+                    Publicada (visível na plataforma)
+                  </label>
+                </div>
+              </div>
+              <DialogFooter className="mt-6">
+                <Button type="button" variant="outline" onClick={() => setEditingJob(null)}>Cancelar</Button>
+                <Button type="submit" disabled={editSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  {editSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
