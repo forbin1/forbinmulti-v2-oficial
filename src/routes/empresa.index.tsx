@@ -41,13 +41,31 @@ function EmpresaDashboard() {
     try {
       setLoading(true);
       // Fetch company
-      const { data: comp, error: compErr } = await supabase
+      let { data: comp, error: compErr } = await supabase
         .from("companies")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (compErr) throw compErr;
+
+      // Self-healing: if company record doesn't exist, insert one on the fly!
+      if (!comp) {
+        const defaultName = user.user_metadata?.company_name || "Minha Empresa";
+        const { data: newComp, error: insertErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: user.id,
+            company_name: defaultName,
+            city: "Rio de Janeiro",
+            state: "RJ"
+          })
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+        comp = newComp;
+      }
       
       if (comp) {
         setCompany(comp);
