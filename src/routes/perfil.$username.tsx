@@ -313,16 +313,33 @@ function EmpresaPublicProfile() {
                     key={j.id}
                     to="/vagas/$jobId"
                     params={{ jobId: j.id }}
-                    className="flex flex-col justify-between rounded-3xl border border-border/60 bg-card p-6 transition hover:border-primary/40 hover:shadow-elevated"
+                    className="group flex flex-col overflow-hidden rounded-3xl border border-border/60 bg-card transition hover:border-primary/50 hover:shadow-elevated"
                   >
-                    <div>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">{j.modality || "Presencial"}</span>
-                      <h3 className="font-display text-lg font-bold mt-1 text-foreground leading-snug line-clamp-2">{j.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{j.description}</p>
+                    {/* Banner */}
+                    <div className="relative aspect-video w-full overflow-hidden">
+                      <img
+                        src={j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"}
+                        alt={j.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+                        {j.contract_type || "CLT"}
+                      </span>
+                      <div className="absolute bottom-3 left-3 flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-lg">
+                        {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+                      </div>
                     </div>
-                    <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4 text-xs text-muted-foreground">
-                      <span>{j.city}, {j.state}</span>
-                      <span className="font-semibold text-foreground">{j.salary_min ? `R$ ${j.salary_min.toLocaleString("pt-BR")}` : "A combinar"}</span>
+                    {/* Info */}
+                    <div className="flex flex-1 flex-col p-5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">{j.modality || "Presencial"}</span>
+                      <h3 className="font-display text-lg font-bold mt-1 text-foreground leading-snug line-clamp-2 group-hover:text-primary transition">{j.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{j.description}</p>
+                      <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-4 text-xs text-muted-foreground mt-4">
+                        <span>📍 {j.city}, {j.state}</span>
+                        <span className="font-semibold text-primary">{j.salary_min ? `R$ ${j.salary_min.toLocaleString("pt-BR")}` : "A combinar"}</span>
+                      </div>
                     </div>
                   </Link>
                 ))}

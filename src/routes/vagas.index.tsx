@@ -47,7 +47,8 @@ function VagasPage() {
         const { data, error } = await supabase
           .from("jobs")
           .select("*, companies(*)")
-          .eq("is_published", true);
+          .eq("is_published", true)
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
         if (data) {
@@ -56,6 +57,8 @@ function VagasPage() {
             title: j.title,
             company: j.companies?.company_name || "Empresa FORBIN",
             companyInitials: j.companies?.company_name?.charAt(0) || "E",
+            companyLogo: j.companies?.logo_url || null,
+            companyUsername: j.companies?.username || null,
             location: `${j.city || "Brasil"}, ${j.state || ""}`,
             type: j.contract_type || "CLT",
             shift: j.modality || "Presencial",
@@ -71,7 +74,20 @@ function VagasPage() {
         console.error("Erro ao carregar vagas do banco:", err);
       }
     };
+
     fetchRealJobs();
+
+    // Realtime: new jobs appear instantly!
+    const channel = supabase
+      .channel("vagas-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "jobs" },
+        () => { fetchRealJobs(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const toggleSpecialty = (s: string) =>
@@ -267,8 +283,12 @@ function VagasPage() {
                     <Badge className="absolute right-3 top-3 rounded-full bg-black/60 text-xs text-white backdrop-blur">
                       {job.type}
                     </Badge>
-                    <div className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-lg">
-                      {job.companyInitials}
+                    <div className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-primary text-sm font-bold text-primary-foreground shadow-lg">
+                      {job.companyLogo ? (
+                        <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover" />
+                      ) : (
+                        job.companyInitials
+                      )}
                     </div>
                   </div>
 
