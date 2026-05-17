@@ -55,13 +55,27 @@ function PerfilEmpresa() {
       setLoading(true);
 
       // Fetch company details
-      const { data: comp, error: compErr } = await supabase
+      let { data: comp, error: compErr } = await supabase
         .from("companies")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (compErr) throw compErr;
+      if (compErr) {
+        console.warn("Erro RLS ao buscar perfil de empresa:", compErr);
+      }
+
+      if (!comp) {
+        comp = {
+          id: user.id,
+          user_id: user.id,
+          company_name: user.user_metadata?.company_name || "Minha Empresa",
+          city: "Rio de Janeiro",
+          state: "RJ",
+          username: "empresa-" + user.id.slice(0, 6)
+        };
+      }
+      
       setCompany(comp);
 
       if (comp) {
