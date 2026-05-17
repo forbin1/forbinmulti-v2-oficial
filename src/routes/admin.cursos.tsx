@@ -3,7 +3,6 @@ import { CoursesAdmin } from "@/components/admin/CoursesAdmin";
 import { createServerFn } from "@tanstack/react-start";
 
 const createCourseServer = createServerFn({ method: "POST" })
-  .validator((d: any) => d)
   .handler(async ({ data: payload }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
@@ -16,7 +15,6 @@ const createCourseServer = createServerFn({ method: "POST" })
   });
 
 const updateCourseServer = createServerFn({ method: "POST" })
-  .validator((d: { id: string; payload: any }) => d)
   .handler(async ({ data: { id, payload } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
@@ -30,7 +28,6 @@ const updateCourseServer = createServerFn({ method: "POST" })
   });
 
 const deleteCourseServer = createServerFn({ method: "POST" })
-  .validator((id: string) => id)
   .handler(async ({ data: id }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
@@ -42,7 +39,6 @@ const deleteCourseServer = createServerFn({ method: "POST" })
   });
 
 const toggleCoursePublishedServer = createServerFn({ method: "POST" })
-  .validator((d: { id: string; is_published: boolean }) => d)
   .handler(async ({ data: { id, is_published } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
