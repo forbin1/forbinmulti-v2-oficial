@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Zap, Rocket, User, Loader2 } from "lucide-react";
+import { Check, Zap, Rocket, User, Loader2, ShieldCheck, Star, Building2, ArrowRight, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,8 +11,7 @@ export const Route = createFileRoute("/planos")({
       { title: "Planos e Assinaturas — FORBIN" },
       {
         name: "description",
-        content:
-          "Escolha o plano ideal: Profissional para quem atua na segurança e planos para empresas que contratam.",
+        content: "Escolha o plano ideal: Profissional para quem atua na segurança e planos para empresas que contratam.",
       },
     ],
   }),
@@ -32,19 +31,6 @@ type Plan = {
   highlight: boolean;
   sort_order: number;
 };
-
-function formatBRL(cents: number) {
-  return (cents / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function pickIcon(slug: string, audience: string) {
-  if (audience === "professional") return User;
-  if (slug.includes("premium")) return Rocket;
-  return Zap;
-}
 
 const DEFAULT_PLANS: Plan[] = [
   {
@@ -67,7 +53,7 @@ const DEFAULT_PLANS: Plan[] = [
     audience: "professional",
     price_cents: 29790,
     period: "year",
-    description: "Economize 10% e garanta sua presença o ano todo.",
+    description: "Economize e garanta sua presença o ano todo.",
     features: ["Todos os benefícios do Mensal", "Suporte prioritário", "Acesso a cursos exclusivos", "Análise de currículo por especialistas"],
     cta_label: "Assinar Anual",
     highlight: true,
@@ -113,13 +99,12 @@ function PlanosPage() {
           .select("*")
           .eq("is_published", true)
           .order("sort_order", { ascending: true });
-        
         if (error || !data || data.length === 0) {
           setPlans(DEFAULT_PLANS);
         } else {
           setPlans(((data as any) ?? []) as Plan[]);
         }
-      } catch (err) {
+      } catch {
         setPlans(DEFAULT_PLANS);
       } finally {
         setLoading(false);
@@ -131,123 +116,238 @@ function PlanosPage() {
   const companies = plans.filter((p) => p.audience === "company");
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-          Planos e assinaturas
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
-          Escolha o plano ideal para você
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          Profissionais e empresas da segurança privada conectados em uma única plataforma.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    <div>
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-background pt-20 pb-16">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 rounded-full bg-primary/5 blur-3xl" />
         </div>
-      ) : (
-        <>
-          {professionals.length > 0 && (
-            <section className="mt-14">
-              <h2 className="mb-6 font-display text-2xl font-bold">Para profissionais</h2>
-              <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                {professionals.map((p) => (
-                  <PlanCard key={p.id} plan={p} ctaTo="/cadastro" />
-                ))}
-                <div className="flex flex-col justify-center rounded-3xl border border-dashed border-border/60 bg-card/40 p-8 xl:col-span-1 lg:col-span-2">
-                  <h3 className="font-display text-xl font-bold">Por que assinar?</h3>
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Acesse vagas exclusivas, conteúdo da comunidade e cursos para destacar
-                    seu currículo no mercado de segurança privada. Conecte-se com as melhores empresas do Brasil.
-                  </p>
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <Badge className="mb-4 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+            Planos e Assinaturas
+          </Badge>
+          <h1 className="font-display text-4xl font-bold tracking-tight sm:text-6xl">
+            Invista no seu <span className="text-gradient-gold">futuro profissional</span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
+            Profissionais e empresas da segurança privada conectados na maior plataforma do Brasil.
+          </p>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+        {loading ? (
+          <div className="flex items-center justify-center py-32">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            {/* ─── PROFISSIONAIS ─── */}
+            {professionals.length > 0 && (
+              <section className="mt-4">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-2xl font-bold">Para profissionais</h2>
+                    <p className="text-sm text-muted-foreground">Agentes e vigilantes da segurança privada</p>
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
 
-          {companies.length > 0 && (
-            <section className="mt-20">
-              <h2 className="mb-6 font-display text-2xl font-bold">Para empresas</h2>
-              <div className="grid gap-6 lg:grid-cols-2">
-                {companies.map((p) => (
-                  <PlanCard key={p.id} plan={p} ctaTo="/cadastro-empresa" />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
+                <div className="grid gap-6 lg:grid-cols-3">
+                  {/* Monthly */}
+                  {professionals.filter(p => p.period === "month").map(p => (
+                    <MonthlyCard key={p.id} plan={p} ctaTo="/cadastro" />
+                  ))}
+                  {/* Annual — highlighted, takes 2 columns */}
+                  {professionals.filter(p => p.period === "year").map(p => (
+                    <AnnualProfCard key={p.id} plan={p} ctaTo="/cadastro" />
+                  ))}
+                  {/* Why subscribe */}
+                  <div className="flex flex-col justify-center rounded-3xl border border-dashed border-border/50 bg-card/30 p-8">
+                    <Star className="h-8 w-8 text-primary mb-4" />
+                    <h3 className="font-display text-xl font-bold">Por que assinar?</h3>
+                    <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                      Acesse vagas exclusivas, cursos e conteúdo para destacar seu currículo. Conecte-se com as melhores empresas de segurança do Brasil.
+                    </p>
+                    <ul className="mt-5 space-y-2">
+                      {["Perfil verificado", "Candidaturas prioritárias", "Suporte especializado"].map(f => (
+                        <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <BadgeCheck className="h-4 w-4 text-primary shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+            )}
 
-      <div className="mt-20 rounded-3xl border border-primary/40 bg-gradient-to-br from-primary/15 to-transparent p-10 text-center">
-        <h3 className="font-display text-2xl font-bold">Dúvidas sobre qual plano escolher?</h3>
-        <p className="mt-2 text-muted-foreground">
-          Fale com nosso time e receba uma recomendação personalizada para sua operação.
-        </p>
-        <Button asChild className="mt-6 h-12 rounded-full bg-primary px-8 font-semibold text-primary-foreground hover:bg-primary/90">
-          <Link to="/cadastro-empresa">Falar com especialista</Link>
-        </Button>
+            {/* ─── EMPRESAS ─── */}
+            {companies.length > 0 && (
+              <section className="mt-20">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-2xl font-bold">Para empresas</h2>
+                    <p className="text-sm text-muted-foreground">Empresas de segurança privada e contratantes</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {companies.filter(p => p.period === "month").map(p => (
+                    <MonthlyCard key={p.id} plan={p} ctaTo="/cadastro-empresa" />
+                  ))}
+                  {companies.filter(p => p.period === "year").map(p => (
+                    <AnnualEmpresaCard key={p.id} plan={p} ctaTo="/cadastro-empresa" />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* CTA Banner */}
+        <div className="mt-20 relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-10 text-center">
+          <div className="pointer-events-none absolute inset-0 bg-radial-gold opacity-10" />
+          <ShieldCheck className="mx-auto h-12 w-12 text-primary mb-4" />
+          <h3 className="font-display text-2xl font-bold sm:text-3xl">Dúvidas sobre qual plano escolher?</h3>
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            Fale com nosso time e receba uma recomendação personalizada para sua operação.
+          </p>
+          <Button asChild className="mt-6 h-12 rounded-full bg-primary px-8 font-semibold text-primary-foreground hover:bg-primary/90">
+            <Link to="/cadastro-empresa">
+              Falar com especialista <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-function PlanCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
-  const Icon = pickIcon(plan.slug, plan.audience);
-  const periodLabel = plan.period === "month" ? "/mês" : plan.period === "year" ? "/ano" : "";
+/* ── Monthly card (simple) ── */
+function MonthlyCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
+  const monthly = plan.price_cents / 100;
   return (
-    <div
-      className={`relative flex flex-col rounded-3xl border p-8 ${
-        plan.highlight
-          ? "border-primary bg-gradient-to-br from-primary/15 to-transparent shadow-gold"
-          : "border-border/60 bg-card"
-      }`}
-    >
-      {plan.highlight && (
-        <Badge className="absolute -top-3 left-8 rounded-full bg-primary px-3 py-1 text-primary-foreground">
-          Mais escolhido
-        </Badge>
-      )}
-      <div className="flex items-center gap-3">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
-            plan.highlight ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"
-          }`}
-        >
-          <Icon className="h-6 w-6" />
-        </div>
-        <h3 className="font-display text-2xl font-bold">{plan.name}</h3>
-      </div>
-
+    <div className="relative flex flex-col rounded-3xl border border-border/60 bg-card p-8">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{plan.period === "month" ? "Mensal" : "Anual"}</p>
+      <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
       <div className="mt-6 flex items-baseline gap-1">
-        <span className="font-display text-4xl font-bold">{formatBRL(plan.price_cents)}</span>
-        <span className="text-muted-foreground">{periodLabel}</span>
+        <span className="font-display text-4xl font-black">
+          R$ {monthly.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+        </span>
+        <span className="text-sm text-muted-foreground">/mês</span>
       </div>
-      {plan.description && (
-        <p className="mt-3 text-sm text-muted-foreground">{plan.description}</p>
-      )}
-
-      <ul className="mt-6 space-y-3">
+      {plan.description && <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>}
+      <ul className="mt-6 space-y-3 flex-1">
         {(plan.features ?? []).map((f) => (
           <li key={f} className="flex items-start gap-3 text-sm">
-            <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <Button asChild className="mt-8 h-12 w-full rounded-full bg-foreground font-semibold text-background hover:bg-foreground/90">
+        <Link to={ctaTo}>{plan.cta_label || "Assinar"}</Link>
+      </Button>
+    </div>
+  );
+}
+
+/* ── Annual Professional card (highlighted) ── */
+function AnnualProfCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
+  // Profissional Anual: R$ 297,90/ano → 12x de R$ 24,83
+  const totalBRL = plan.price_cents / 100;
+  const installment = totalBRL / 12;
+  return (
+    <div className="relative flex flex-col rounded-3xl border-2 border-primary bg-gradient-to-br from-primary/20 via-primary/8 to-transparent p-8 shadow-gold">
+      <Badge className="absolute -top-3.5 left-8 rounded-full bg-primary px-4 py-1 text-xs font-bold text-primary-foreground shadow-gold">
+        ⭐ Mais escolhido
+      </Badge>
+
+      <p className="text-xs font-semibold uppercase tracking-widest text-primary">Anual — Melhor custo-benefício</p>
+      <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
+
+      {/* Big installment */}
+      <div className="mt-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">No cartão</p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-semibold text-muted-foreground">12x de</span>
+          <span className="font-display text-5xl font-black text-primary">
+            R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
+        </p>
+      </div>
+
+      {plan.description && <p className="mt-4 text-sm text-muted-foreground">{plan.description}</p>}
+
+      <ul className="mt-6 space-y-3 flex-1">
+        {(plan.features ?? []).map((f) => (
+          <li key={f} className="flex items-start gap-3 text-sm font-medium">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span>{f}</span>
           </li>
         ))}
       </ul>
 
-      <Button
-        asChild
-        className={`mt-8 h-12 rounded-full font-semibold ${
-          plan.highlight
-            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-            : "bg-foreground text-background hover:bg-foreground/90"
-        }`}
-      >
-        <Link to={ctaTo}>{plan.cta_label || "Assinar"}</Link>
+      <Button asChild className="mt-8 h-14 w-full rounded-full bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90">
+        <Link to={ctaTo}>{plan.cta_label || "Assinar Anual"}</Link>
       </Button>
+      <p className="mt-3 text-center text-xs text-muted-foreground">Sem fidelidade. Cancele quando quiser.</p>
+    </div>
+  );
+}
+
+/* ── Annual Empresa card (highlighted) ── */
+function AnnualEmpresaCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
+  // Empresa Anual: R$ 3.000,00/ano → 12x de R$ 300,00
+  const totalBRL = plan.price_cents / 100;
+  const installment = totalBRL / 12;
+  return (
+    <div className="relative flex flex-col rounded-3xl border-2 border-primary bg-gradient-to-br from-primary/20 via-primary/8 to-transparent p-8 shadow-gold">
+      <Badge className="absolute -top-3.5 left-8 rounded-full bg-primary px-4 py-1 text-xs font-bold text-primary-foreground shadow-gold">
+        ⭐ Mais escolhido
+      </Badge>
+
+      <p className="text-xs font-semibold uppercase tracking-widest text-primary">Anual — Máxima performance</p>
+      <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
+
+      {/* Big installment */}
+      <div className="mt-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">No cartão</p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-semibold text-muted-foreground">12x de</span>
+          <span className="font-display text-5xl font-black text-primary">
+            R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
+        </p>
+      </div>
+
+      {plan.description && <p className="mt-4 text-sm text-muted-foreground">{plan.description}</p>}
+
+      <ul className="mt-6 space-y-3 flex-1">
+        {(plan.features ?? []).map((f) => (
+          <li key={f} className="flex items-start gap-3 text-sm font-medium">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+
+      <Button asChild className="mt-8 h-14 w-full rounded-full bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90">
+        <Link to={ctaTo}>{plan.cta_label || "Assinar Anual"}</Link>
+      </Button>
+      <p className="mt-3 text-center text-xs text-muted-foreground">Contrato anual. Suporte dedicado incluso.</p>
     </div>
   );
 }
