@@ -25,10 +25,39 @@ import {
 } from "@/components/ui/dialog";
 import { JOBS } from "@/data/mock";
 import { useAuthGate } from "@/components/RequireAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/vagas/$jobId")({
-  loader: ({ params }) => {
-    const job = JOBS.find((j) => j.id === params.jobId);
+  loader: async ({ params }) => {
+    let job = JOBS.find((j) => j.id === params.jobId);
+    if (!job) {
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*, companies(*)")
+        .eq("id", params.jobId)
+        .maybeSingle();
+
+      if (data) {
+        job = {
+          id: data.id,
+          title: data.title,
+          company: data.companies?.company_name || "Empresa FORBIN",
+          companyInitials: data.companies?.company_name?.charAt(0) || "E",
+          location: `${data.city || "Brasil"}, ${data.state || ""}`,
+          type: data.contract_type || "CLT",
+          shift: data.modality || "Presencial",
+          salary: data.salary_min ? `R$ ${data.salary_min.toLocaleString("pt-BR")}` : "A combinar",
+          posted: "Recém criada",
+          applicants: 0,
+          description: data.description || "",
+          requirements: data.requirements ? data.requirements.split(",") : [],
+          benefits: data.benefits ? data.benefits.split(",") : [],
+          cover: "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
+          companyUserId: data.companies?.user_id
+        } as any;
+      }
+    }
     if (!job) throw notFound();
     return { job };
   },
@@ -57,13 +86,35 @@ function JobDetail() {
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
   const gate = useAuthGate();
+  const { user } = useAuth();
 
-  const handleApply = () => {
-    setApplied(true);
-    setOpen(false);
-    toast.success("Candidatura enviada!", {
-      description: `Sua candidatura para "${job.title}" foi registrada. Acompanhe pelo Painel Profissional.`,
-    });
+  const handleApply = async () => {
+    try {
+      if (user) {
+        const companyUserId = (job as any).companyUserId;
+        if (companyUserId) {
+          const { error } = await supabase
+            .from("applications")
+            .insert({
+              job_id: job.id,
+              professional_id: user.id,
+              company_id: companyUserId,
+              status: "novo"
+            });
+
+          if (error && error.code !== "23505") { // Ignore unique constraint duplicate candidate
+            throw error;
+          }
+        }
+      }
+      setApplied(true);
+      setOpen(false);
+      toast.success("Candidatura enviada!", {
+        description: `Sua candidatura para "${job.title}" foi registrada. Acompanhe pelo Painel Profissional.`,
+      });
+    } catch (err: any) {
+      toast.error("Erro ao enviar candidatura: " + err.message);
+    }
   };
 
   const handleShare = async () => {

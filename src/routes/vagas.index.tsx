@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, Fragment } from "react";
-import { MapPin, Search, SlidersHorizontal, Briefcase, Building2, Lock } from "lucide-react";
+import { useState, Fragment, useEffect } from "react";
+import { MapPin, Search, SlidersHorizontal, Briefcase, Building2, Lock, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 import { JOBS, COURSES } from "@/data/mock";
 import { ADS, AdBanner } from "@/components/AdBanner";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/vagas-hero.jpg";
 
 export const Route = createFileRoute("/vagas/")({
@@ -38,11 +39,47 @@ function VagasPage() {
   const [type, setType] = useState<(typeof TYPES)[number]>("Todos");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [realJobs, setRealJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRealJobs = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*, companies(*)")
+          .eq("is_published", true);
+
+        if (error) throw error;
+        if (data) {
+          const mapped = data.map((j: any) => ({
+            id: j.id,
+            title: j.title,
+            company: j.companies?.company_name || "Empresa FORBIN",
+            companyInitials: j.companies?.company_name?.charAt(0) || "E",
+            location: `${j.city || "Brasil"}, ${j.state || ""}`,
+            type: j.contract_type || "CLT",
+            shift: j.modality || "Presencial",
+            salary: j.salary_min ? `R$ ${j.salary_min.toLocaleString("pt-BR")}` : "A combinar",
+            posted: "Recém criada",
+            applicants: 0,
+            requirements: j.requirements ? j.requirements.split(",") : [],
+            cover: "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
+          }));
+          setRealJobs(mapped);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar vagas do banco:", err);
+      }
+    };
+    fetchRealJobs();
+  }, []);
 
   const toggleSpecialty = (s: string) =>
     setSpecialties((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
-  const filtered = JOBS.filter((j) => {
+  const combinedJobs = [...realJobs, ...JOBS];
+
+  const filtered = combinedJobs.filter((j) => {
     const matchRegion = region === "Todas" || j.location.includes(region);
     const matchType = type === "Todos" || j.type === type;
     const matchQuery =
