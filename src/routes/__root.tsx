@@ -79,7 +79,8 @@ function RootComponent() {
   const { pathname } = useLocation();
   const isAuthScreen = pathname === "/login";
   const isAdminArea = pathname === "/admin" || pathname.startsWith("/admin/");
-  const hideChrome = isAuthScreen || isAdminArea;
+  const isEmpresaArea = pathname === "/empresa" || pathname.startsWith("/empresa/");
+  const hideChrome = isAuthScreen || isAdminArea || isEmpresaArea;
 
   useEffect(() => {
     if (typeof window === "undefined") return;

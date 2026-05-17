@@ -66,6 +66,13 @@ function EmpresaSidebarContents({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t border-border/60 p-3 space-y-2">
         <Link
+          to="/"
+          className="flex w-full items-center gap-2 rounded-xl border border-border/60 px-3 py-2.5 text-sm font-medium hover:bg-accent"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar à plataforma
+        </Link>
+        <Link
           to="/perfil-empresa"
           className="flex w-full items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
         >
