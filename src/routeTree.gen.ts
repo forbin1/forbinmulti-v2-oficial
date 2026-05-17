@@ -14,6 +14,7 @@ import { Route as ProfissionalRouteImport } from './routes/profissional'
 import { Route as ProfissionaisAtivosRouteImport } from './routes/profissionais-ativos'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as PerfilEmpresaRouteImport } from './routes/perfil-empresa'
+import { Route as MinhaAssinaturaRouteImport } from './routes/minha-assinatura'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
@@ -71,6 +72,11 @@ const PlanosRoute = PlanosRouteImport.update({
 const PerfilEmpresaRoute = PerfilEmpresaRouteImport.update({
   id: '/perfil-empresa',
   path: '/perfil-empresa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinhaAssinaturaRoute = MinhaAssinaturaRouteImport.update({
+  id: '/minha-assinatura',
+  path: '/minha-assinatura',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -251,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
+  '/minha-assinatura': typeof MinhaAssinaturaRoute
   '/perfil-empresa': typeof PerfilEmpresaRoute
   '/planos': typeof PlanosRoute
   '/profissionais-ativos': typeof ProfissionaisAtivosRouteWithChildren
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
+  '/minha-assinatura': typeof MinhaAssinaturaRoute
   '/perfil-empresa': typeof PerfilEmpresaRoute
   '/planos': typeof PlanosRoute
   '/profissionais-ativos': typeof ProfissionaisAtivosRouteWithChildren
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
+  '/minha-assinatura': typeof MinhaAssinaturaRoute
   '/perfil-empresa': typeof PerfilEmpresaRoute
   '/planos': typeof PlanosRoute
   '/profissionais-ativos': typeof ProfissionaisAtivosRouteWithChildren
@@ -372,6 +381,7 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/feed'
     | '/login'
+    | '/minha-assinatura'
     | '/perfil-empresa'
     | '/planos'
     | '/profissionais-ativos'
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/feed'
     | '/login'
+    | '/minha-assinatura'
     | '/perfil-empresa'
     | '/planos'
     | '/profissionais-ativos'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/feed'
     | '/login'
+    | '/minha-assinatura'
     | '/perfil-empresa'
     | '/planos'
     | '/profissionais-ativos'
@@ -491,6 +503,7 @@ export interface RootRouteChildren {
   FavoritosRoute: typeof FavoritosRoute
   FeedRoute: typeof FeedRoute
   LoginRoute: typeof LoginRoute
+  MinhaAssinaturaRoute: typeof MinhaAssinaturaRoute
   PerfilEmpresaRoute: typeof PerfilEmpresaRoute
   PlanosRoute: typeof PlanosRoute
   ProfissionaisAtivosRoute: typeof ProfissionaisAtivosRouteWithChildren
@@ -537,6 +550,13 @@ declare module '@tanstack/react-router' {
       path: '/perfil-empresa'
       fullPath: '/perfil-empresa'
       preLoaderRoute: typeof PerfilEmpresaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minha-assinatura': {
+      id: '/minha-assinatura'
+      path: '/minha-assinatura'
+      fullPath: '/minha-assinatura'
+      preLoaderRoute: typeof MinhaAssinaturaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -856,6 +876,7 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritosRoute: FavoritosRoute,
   FeedRoute: FeedRoute,
   LoginRoute: LoginRoute,
+  MinhaAssinaturaRoute: MinhaAssinaturaRoute,
   PerfilEmpresaRoute: PerfilEmpresaRoute,
   PlanosRoute: PlanosRoute,
   ProfissionaisAtivosRoute: ProfissionaisAtivosRouteWithChildren,

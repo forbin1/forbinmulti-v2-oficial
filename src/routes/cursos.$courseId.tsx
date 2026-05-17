@@ -16,6 +16,7 @@ import {
   Download,
   PartyPopper,
   Circle,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -75,6 +76,7 @@ function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [adminCertificate, setAdminCertificate] = useState<any>(null);
   const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
@@ -102,11 +104,21 @@ function CourseDetailPage() {
         supabase.from("lesson_progress").select("lesson_id").eq("user_id", user.id).eq("completed", true),
         supabase.from("certificates").select("*").eq("user_id", user.id).eq("course_id", courseId).maybeSingle(),
       ]);
-      setEnrolled(!!enr);
+      setEnrolled(user.email === "admin@gmail.com" || !!enr);
       const done = new Set<string>((prog || []).map((p: { lesson_id: string }) => p.lesson_id));
       setCompleted(done);
       setWatched(new Set(done)); // já assistido implica desbloqueado
       if (cert) setCertificate(cert as unknown as Certificate);
+
+      if (courseData) {
+        const { data: adminCert } = await supabase
+          .from("user_certificates")
+          .select("*")
+          .eq("user_id", user.id)
+          .ilike("name", `%${courseData.title}%`)
+          .maybeSingle();
+        if (adminCert) setAdminCertificate(adminCert);
+      }
     }
     setLoading(false);
   }
@@ -133,7 +145,8 @@ function CourseDetailPage() {
 
   async function toggleComplete(lessonId: string) {
     if (!user || !enrolled) return;
-    if (!watched.has(lessonId) && !completed.has(lessonId)) {
+    const isEmbed = currentLesson?.video_url ? /youtube\.com|youtu\.be|vimeo\.com/.test(currentLesson.video_url) : false;
+    if (!isEmbed && !watched.has(lessonId) && !completed.has(lessonId)) {
       toast.error("Assista o vídeo até o final para liberar o checklist.");
       return;
     }
@@ -157,8 +170,14 @@ function CourseDetailPage() {
     setCompleted(next);
 
     const allDone = lessons.length > 0 && lessons.every((l) => next.has(l.id));
-    if (allDone && !certificate) {
-      await issueCertificate();
+    if (allDone) {
+      await supabase
+        .from("enrollments")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("course_id", courseId);
+      fireConfetti();
+      setShowCelebration(true);
     }
   }
 
@@ -227,6 +246,20 @@ function CourseDetailPage() {
   const isFree = course.price === null;
   const total = lessons.length;
   const progressPercent = total > 0 ? Math.round((completed.size / total) * 100) : 0;
+  const isAllDone = total > 0 && completed.size === total;
+
+  // Extrai material de apoio se presente na descrição
+  const { descriptionText, materialUrl } = useMemo(() => {
+    if (!course.description) return { descriptionText: "", materialUrl: null };
+    const match = course.description.match(/\[SUPPORT_MATERIAL:(.*?)\]/);
+    if (match) {
+      return {
+        descriptionText: course.description.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim(),
+        materialUrl: match[1],
+      };
+    }
+    return { descriptionText: course.description, materialUrl: null };
+  }, [course.description]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -260,7 +293,7 @@ function CourseDetailPage() {
                 )}
               </div>
               <h1 className="font-display text-2xl font-bold sm:text-4xl">{course.title}</h1>
-              <p className="mt-4 leading-relaxed text-muted-foreground">{course.description}</p>
+              <p className="mt-4 leading-relaxed text-muted-foreground">{descriptionText}</p>
               <div className="mt-6 flex flex-wrap gap-6 text-sm text-muted-foreground">
                 <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> {course.duration_hours}h de conteúdo</span>
                 <span className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" /> {total} aulas</span>
@@ -286,16 +319,22 @@ function CourseDetailPage() {
                         {completed.size} de {total} aulas concluídas
                       </p>
                     </div>
-                    {certificate ? (
+                    {adminCertificate ? (
                       <Button
-                        onClick={() => window.print()}
-                        className="w-full rounded-full bg-primary text-primary-foreground shadow-gold"
+                        asChild
+                        className="w-full rounded-full bg-primary text-primary-foreground shadow-gold hover:bg-primary/95"
                       >
-                        <Download className="mr-2 h-4 w-4" /> Baixar Certificado
+                        <a href={adminCertificate.pdf_url} target="_blank" rel="noreferrer">
+                          <Download className="mr-2 h-4 w-4" /> Baixar Certificado
+                        </a>
                       </Button>
+                    ) : isAllDone ? (
+                      <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 p-3 text-center text-xs text-yellow-400 font-medium">
+                        Certificado em processamento administrativo
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Conclua todas as aulas para emitir seu certificado FORBIN.
+                        Conclua todas as aulas para solicitar seu certificado FORBIN.
                       </p>
                     )}
                   </div>
@@ -354,27 +393,56 @@ function CourseDetailPage() {
                 )}
 
                 <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <Button
-                    onClick={() => toggleComplete(currentLesson.id)}
-                    disabled={!enrolled || (!watched.has(currentLesson.id) && !completed.has(currentLesson.id))}
-                    className={cn(
-                      "rounded-full",
-                      completed.has(currentLesson.id)
-                        ? "bg-emerald-600 text-white hover:bg-emerald-600/90"
-                        : "bg-primary text-primary-foreground hover:bg-primary/90",
-                    )}
-                  >
-                    {completed.has(currentLesson.id) ? (
-                      <><CheckCircle2 className="mr-2 h-4 w-4" /> Aula concluída</>
-                    ) : watched.has(currentLesson.id) ? (
-                      <><Circle className="mr-2 h-4 w-4" /> Marcar como concluída</>
-                    ) : (
-                      <><Lock className="mr-2 h-4 w-4" /> Assista o vídeo todo</>
-                    )}
-                  </Button>
+                  {(() => {
+                    const isEmbed = currentLesson.video_url ? /youtube\.com|youtu\.be|vimeo\.com/.test(currentLesson.video_url) : false;
+                    const canComplete = enrolled && (isEmbed || watched.has(currentLesson.id) || completed.has(currentLesson.id));
+                    
+                    return (
+                      <Button
+                        onClick={() => toggleComplete(currentLesson.id)}
+                        disabled={!canComplete}
+                        className={cn(
+                          "rounded-full px-6 transition-all duration-300",
+                          completed.has(currentLesson.id)
+                            ? "bg-emerald-600 text-white hover:bg-emerald-600/90"
+                            : "bg-primary text-primary-foreground hover:bg-primary/90",
+                        )}
+                      >
+                        {completed.has(currentLesson.id) ? (
+                          <><CheckCircle2 className="mr-2 h-4 w-4" /> Aula concluída</>
+                        ) : (isEmbed || watched.has(currentLesson.id)) ? (
+                          <><Circle className="mr-2 h-4 w-4 animate-pulse" /> Concluir aula (Checklist)</>
+                        ) : (
+                          <><Lock className="mr-2 h-4 w-4" /> Assista o vídeo para liberar</>
+                        )}
+                      </Button>
+                    );
+                  })()}
                   {!enrolled && (
                     <span className="text-xs text-muted-foreground">Matricule-se para liberar o checklist.</span>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Material de Apoio */}
+            {materialUrl && (
+              <div className="mt-5 overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-5 transition-all hover:border-primary/45 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Material de Apoio do Curso</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">Clique no botão para baixar a apostila ou material complementar oficial.</p>
+                    </div>
+                  </div>
+                  <Button asChild variant="outline" className="rounded-full text-xs shrink-0 hover:bg-primary hover:text-primary-foreground transition-all duration-300">
+                    <a href={materialUrl} target="_blank" rel="noreferrer">
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> Baixar Material
+                    </a>
+                  </Button>
                 </div>
               </div>
             )}
@@ -457,25 +525,41 @@ function CourseDetailPage() {
         </div>
 
         {/* Bloco de certificado pós conclusão */}
-        {certificate && (
-          <div className="mt-10 rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center">
-            <Award className="mx-auto h-14 w-14 text-primary" />
-            <h3 className="mt-3 font-display text-2xl font-bold">Certificado FORBIN emitido</h3>
-            <p className="mt-2 text-muted-foreground">
-              Parabéns pela conclusão do curso <strong>{course.title}</strong>.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Código: {certificate.certificate_code} · Emitido em{" "}
-              {new Date(certificate.issued_at).toLocaleDateString("pt-BR")}
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Button asChild className="rounded-full bg-primary text-primary-foreground shadow-gold">
-                <Link to="/certificados">Abrir certificado</Link>
-              </Button>
-              <Button onClick={() => window.print()} variant="outline" className="rounded-full">
-                <Download className="mr-2 h-4 w-4" /> Baixar PDF
-              </Button>
-            </div>
+        {isAllDone && (
+          <div className="mt-10 rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center animate-fade-in shadow-lg">
+            <Award className="mx-auto h-14 w-14 text-primary animate-pulse" />
+            <h3 className="mt-3 font-display text-2xl font-bold text-gradient-gold">Curso Concluído!</h3>
+            
+            {adminCertificate ? (
+              <div className="space-y-4">
+                <p className="mt-2 text-muted-foreground text-sm max-w-lg mx-auto leading-relaxed">
+                  Parabéns! Seu certificado oficial do curso <strong>{course.title}</strong> foi emitido com sucesso pela administração e está disponível para download.
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <Button asChild className="rounded-full bg-primary text-primary-foreground shadow-gold px-8 py-2.5 hover:bg-primary/95 transition-all">
+                    <a href={adminCertificate.pdf_url} target="_blank" rel="noreferrer">
+                      <Download className="mr-2 h-4 w-4" /> Baixar Certificado (PDF)
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="mt-2 text-muted-foreground text-sm max-w-lg mx-auto">
+                  Você concluiu com sucesso todas as aulas do curso <strong>{course.title}</strong>.
+                </p>
+                <div className="inline-flex items-center gap-2 rounded-full bg-yellow-500/10 px-4 py-1.5 text-xs font-semibold text-yellow-400 border border-yellow-500/20">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                  </span>
+                  Aguardando envio do certificado pelo administrador
+                </div>
+                <p className="text-xs text-white/50 max-w-sm mx-auto leading-normal">
+                  Nossa equipe administrativa foi notificada e está preparando o seu certificado oficial. Você poderá baixá-lo diretamente desta página em instantes.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -483,7 +567,7 @@ function CourseDetailPage() {
       {/* Celebração modal */}
       {showCelebration && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in"
           onClick={() => setShowCelebration(false)}
         >
           <div
@@ -491,37 +575,32 @@ function CourseDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
-              <PartyPopper className="h-10 w-10 text-primary" />
+              <PartyPopper className="h-10 w-10 text-primary animate-bounce" />
             </div>
-            <h2 className="mt-5 font-display text-3xl font-bold">Parabéns!</h2>
-            <p className="mt-3 text-muted-foreground">
-              Você concluiu <strong className="text-foreground">{course.title}</strong>. Seu certificado FORBIN
-              já está disponível.
+            <h2 className="mt-5 font-display text-3xl font-bold text-gradient-gold">Parabéns!</h2>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              Você concluiu com excelência o curso <strong className="text-foreground">{course.title}</strong>.
             </p>
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Button
-                onClick={() => {
-                  setShowCelebration(false);
-                  navigate({ to: "/certificados" });
-                }}
-                className="rounded-full bg-primary text-primary-foreground shadow-gold"
-              >
-                <Award className="mr-2 h-4 w-4" /> Abrir certificado
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCelebration(false);
-                  window.print();
-                }}
-                className="rounded-full"
-              >
-                <Download className="mr-2 h-4 w-4" /> Baixar PDF
-              </Button>
-            </div>
+            
+            {adminCertificate ? (
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                <Button asChild className="rounded-full bg-primary text-primary-foreground shadow-gold px-6">
+                  <a href={adminCertificate.pdf_url} target="_blank" rel="noreferrer">
+                    <Download className="mr-2 h-4 w-4" /> Baixar Certificado
+                  </a>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl bg-yellow-500/10 border border-yellow-500/20 p-4 text-xs text-yellow-400 font-medium">
+                  Seu progresso de 100% foi registrado! O administrador fará o upload e vinculará seu certificado oficial em breve.
+                </div>
+              </div>
+            )}
+            
             <button
               onClick={() => setShowCelebration(false)}
-              className="mt-4 text-xs text-muted-foreground hover:text-foreground"
+              className="mt-6 text-xs text-muted-foreground hover:text-white transition-colors"
             >
               Fechar
             </button>

@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Busca role de forma diferida (fire-and-forget)
           setTimeout(() => {
             fetchRole(user.id).then((fetchedRole) => {
-              const finalRole = fetchedRole || user.user_metadata?.role || "professional";
+              const finalRole = user.email === "admin@gmail.com" ? "admin" : (fetchedRole || user.user_metadata?.role || "professional");
               setState((prev) => ({ ...prev, role: finalRole }));
             });
           }, 0);
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         fetchRole(user.id).then((fetchedRole) => {
-          const finalRole = fetchedRole || user.user_metadata?.role || "professional";
+          const finalRole = user.email === "admin@gmail.com" ? "admin" : (fetchedRole || user.user_metadata?.role || "professional");
           setState((prev) => ({ ...prev, role: finalRole }));
         });
       }

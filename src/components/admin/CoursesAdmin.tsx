@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pencil, Trash2, Eye, EyeOff, Plus, GraduationCap, Loader2, Layers } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Pencil, Trash2, Eye, EyeOff, Plus, GraduationCap, Loader2, Layers, Upload, FileText } from "lucide-react";
 import { ModulesManager } from "@/components/admin/ModulesManager";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -234,28 +234,67 @@ function CourseDialog({
 }) {
   const [form, setForm] = useState<Omit<Course, "id">>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [supportMaterialUrl, setSupportMaterialUrl] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (course) {
       const { id, ...rest } = course;
-      setForm(rest);
+      const desc = rest.description || "";
+      const match = desc.match(/\[SUPPORT_MATERIAL:(.*?)\]/);
+      if (match) {
+        setSupportMaterialUrl(match[1]);
+        setForm({ ...rest, description: desc.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim() });
+      } else {
+        setSupportMaterialUrl("");
+        setForm(rest);
+      }
     } else {
       setForm(EMPTY);
+      setSupportMaterialUrl("");
     }
   }, [course, open]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  const handleUploadMaterial = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop() || "pdf";
+    const rand = Math.random().toString(36).substring(2, 15);
+    const path = `materials/${rand}.${ext}`;
+    const { error } = await supabase.storage
+      .from("certificates")
+      .upload(path, file, { upsert: false });
+
+    if (error) {
+      setUploading(true);
+      toast.error("Erro no upload: " + error.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from("certificates").getPublicUrl(path);
+    setSupportMaterialUrl(data.publicUrl);
+    setUploading(false);
+    toast.success("Material de apoio carregado!");
+  };
+
   const save = async () => {
     if (!form.title.trim() || !form.instructor.trim()) {
       return toast.error("Título e instrutor são obrigatórios");
     }
     setSaving(true);
+
+    let finalDescription = form.description || "";
+    if (supportMaterialUrl.trim()) {
+      finalDescription = `${finalDescription.trim()} \n\n[SUPPORT_MATERIAL:${supportMaterialUrl.trim()}]`;
+    }
+
     const payload = {
       ...form,
       thumbnail_url: form.thumbnail_url || null,
-      description: form.description || null,
+      description: finalDescription || null,
       duration_hours: Number(form.duration_hours) || 0,
       total_lessons: Number(form.total_lessons) || 0,
       price: form.price ? Number(form.price) : null,
@@ -312,14 +351,64 @@ function CourseDialog({
               <Input type="number" value={form.total_lessons}
                 onChange={(e) => set("total_lessons", Number(e.target.value))} />
             </Field>
-            <Field label="Preço (R$)">
-              <Input type="number" step="0.01" value={form.price ?? ""}
-                onChange={(e) => set("price", e.target.value ? Number(e.target.value) : null)} />
+
+            <Field label="Tipo de Curso">
+              <Select value={form.price !== null ? "paid" : "free"} onValueChange={(v) => set("price", v === "paid" ? 49.90 : null)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Grátis (Incluso na mensalidade)</SelectItem>
+                  <SelectItem value="paid">Pago (desbloqueio avulso)</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
+
+            {form.price !== null && (
+              <Field label="Preço de Desbloqueio (R$)">
+                <Input type="number" step="0.01" min="0.01" value={form.price ?? ""}
+                  onChange={(e) => set("price", e.target.value ? Number(e.target.value) : 0)} />
+              </Field>
+            )}
           </div>
+
           <Field label="URL da capa (thumbnail)">
             <Input value={form.thumbnail_url ?? ""} onChange={(e) => set("thumbnail_url", e.target.value)} placeholder="https://..." />
           </Field>
+
+          <div>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Material de Apoio (Opcional)</Label>
+            <div className="mt-2 flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="rounded-xl"
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                {supportMaterialUrl ? "Alterar Material" : "Enviar Material"}
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadMaterial(f);
+                }}
+              />
+              {supportMaterialUrl && (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-medium">
+                  <FileText className="h-4 w-4" />
+                  <span>Material carregado ✓</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -332,7 +421,7 @@ function CourseDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving || uploading}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Salvar
           </Button>

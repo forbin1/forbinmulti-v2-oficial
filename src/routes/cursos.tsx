@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Play, Lock } from "lucide-react";
+import { Play, Lock, GraduationCap } from "lucide-react";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const getCourses = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -40,58 +44,42 @@ type Course = {
 function CursosPage() {
   const rawCourses = Route.useLoaderData() as Course[];
   let courses = rawCourses || [];
-  // Fallback para mock data se o banco estiver vazio
+  
+  const { user } = useAuth();
+  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+  const [lessonsList, setLessonsList] = useState<{ id: string; course_id: string }[]>([]);
+
+  useEffect(() => {
+    async function loadProgress() {
+      if (!user) return;
+      const [{ data: prog }, { data: allLs }] = await Promise.all([
+        supabase
+          .from("lesson_progress")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .eq("completed", true),
+        supabase
+          .from("lessons")
+          .select("id, course_id"),
+      ]);
+      if (prog) setCompletedLessons(prog.map((p) => p.lesson_id));
+      if (allLs) setLessonsList(allLs || []);
+    }
+    loadProgress();
+  }, [user]);
+
   if (courses.length === 0) {
-    courses = [
-      {
-        id: "mock-1",
-        title: "Formação Especial de Escolta Armada",
-        description: "Curso completo prático e teórico",
-        thumbnail_url: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1920&h=640&fit=crop",
-        instructor: "FORBIN Academy",
-        duration_hours: 40,
-        category: "Especializações",
-        price: null,
-        level: "Avançado",
-        total_lessons: 12
-      },
-      {
-        id: "mock-2",
-        title: "Táticas de Defesa Pessoal",
-        description: "Defesa e imobilização",
-        thumbnail_url: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=1920&h=640&fit=crop",
-        instructor: "FORBIN Academy",
-        duration_hours: 20,
-        category: "Especializações",
-        price: null,
-        level: "Intermediário",
-        total_lessons: 8
-      },
-      {
-        id: "mock-3",
-        title: "Liderança e Gestão de Equipes",
-        description: "Para supervisores",
-        thumbnail_url: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=1920&h=640&fit=crop",
-        instructor: "FORBIN Academy",
-        duration_hours: 15,
-        category: "Gestão",
-        price: null,
-        level: "Avançado",
-        total_lessons: 5
-      },
-      {
-        id: "mock-4",
-        title: "Operador de CFTV Inteligente",
-        description: "Monitoramento",
-        thumbnail_url: "https://images.unsplash.com/photo-1564540583246-934409427776?w=1920&h=640&fit=crop",
-        instructor: "FORBIN Academy",
-        duration_hours: 30,
-        category: "Tecnologia",
-        price: null,
-        level: "Iniciante",
-        total_lessons: 10
-      }
-    ];
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 border border-primary/20 mb-6">
+          <GraduationCap className="h-10 w-10 text-primary" />
+        </div>
+        <h1 className="font-display text-3xl font-bold">Nenhum curso disponível</h1>
+        <p className="text-muted-foreground mt-3 max-w-md leading-relaxed text-sm">
+          Estamos preparando os melhores treinamentos, especializações e táticas de segurança privada para você. Novos cursos serão publicados em breve!
+        </p>
+      </div>
+    );
   }
 
   const categories = [...new Set(courses.map((c) => c.category))];
@@ -152,7 +140,12 @@ function CursosPage() {
               <div className="flex gap-4 overflow-x-auto pb-8 pt-2 px-4 sm:px-6 lg:px-10 snap-x snap-mandatory hide-scrollbar">
                 {g.courses.map((course, i) => (
                   <div key={course.id} className="snap-start shrink-0 w-44 sm:w-52 lg:w-64">
-                    <CourseModule course={course} index={i} />
+                    <CourseModule
+                      course={course}
+                      index={i}
+                      completedLessons={completedLessons}
+                      lessonsList={lessonsList}
+                    />
                   </div>
                 ))}
               </div>
@@ -164,8 +157,25 @@ function CursosPage() {
   );
 }
 
-function CourseModule({ course, index }: { course: Course; index: number }) {
+function CourseModule({
+  course,
+  index,
+  completedLessons = [],
+  lessonsList = [],
+}: {
+  course: Course;
+  index: number;
+  completedLessons?: string[];
+  lessonsList?: { id: string; course_id: string }[];
+}) {
   const isFree = course.price === null;
+  const { user } = useAuth();
+
+  // Calcula o progresso para este curso
+  const courseLessons = lessonsList.filter((l) => l.course_id === course.id);
+  const total = courseLessons.length;
+  const done = courseLessons.filter((l) => completedLessons.includes(l.id)).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
     <Link
@@ -182,7 +192,7 @@ function CourseModule({ course, index }: { course: Course; index: number }) {
           loading="lazy"
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
 
         {/* Play icon on hover */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -203,12 +213,33 @@ function CourseModule({ course, index }: { course: Course; index: number }) {
 
         {/* Bottom text */}
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          <h3 className="font-display text-sm font-bold leading-tight text-white line-clamp-2">
+          <h3 className="font-display text-xs font-bold leading-tight text-white line-clamp-2 sm:text-sm">
             {course.title}
           </h3>
-          <p className="mt-1 text-[11px] text-white/50">
+          <p className="mt-1 text-[10px] text-white/50">
             Módulo {index + 1}
           </p>
+
+          {/* Progress Bar */}
+          {user && total > 0 && (
+            <div className="mt-2 space-y-1">
+              <div className="flex justify-between text-[9px] font-bold">
+                <span className={pct === 100 ? "text-emerald-400" : "text-primary"}>
+                  {pct === 100 ? "Concluído ✓" : `${pct}% concluído`}
+                </span>
+                <span className="text-white/40">{done}/{total} aulas</span>
+              </div>
+              <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-500",
+                    pct === 100 ? "bg-emerald-500" : "bg-primary"
+                  )}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Link>

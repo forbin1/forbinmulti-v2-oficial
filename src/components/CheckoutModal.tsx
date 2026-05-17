@@ -57,13 +57,40 @@ export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
     setStep("processing");
     setTimeout(async () => {
       if (!user) {
-        toast.error("Faça login antes de assinar.");
+        toast.error("Faça login antes de prosseguir.");
         setStep("method");
         return;
       }
-      const err = await activateSubscription(user.id, role, plan.periodRaw, plan.slug);
-      if (err) { toast.error("Erro ao ativar plano: " + err.message); setStep("method"); }
-      else { setStep("success"); onSuccess?.(); }
+      
+      const isCourse = plan.slug.startsWith("course-");
+      
+      if (isCourse) {
+        const courseId = plan.slug.replace("course-", "");
+        const { error } = await supabase.from("enrollments").insert({ user_id: user.id, course_id: courseId });
+        if (error) {
+          toast.error("Erro ao adquirir curso: " + error.message);
+          setStep("method");
+        } else {
+          // Criar notificação de sucesso
+          await supabase.from("notifications").insert({
+            user_id: user.id,
+            title: "Curso desbloqueado! 🎓",
+            message: `Você adquiriu o curso "${plan.name}" com sucesso. Bons estudos!`,
+            type: "success",
+          });
+          setStep("success");
+          onSuccess?.();
+        }
+      } else {
+        const err = await activateSubscription(user.id, role, plan.periodRaw, plan.slug);
+        if (err) {
+          toast.error("Erro ao ativar plano: " + err.message);
+          setStep("method");
+        } else {
+          setStep("success");
+          onSuccess?.();
+        }
+      }
     }, 2200);
   };
 
@@ -85,6 +112,7 @@ export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
     cardCvv.length >= 3;
 
   const dashboardPath = role === "professional" ? "/perfil" : "/empresa";
+  const isCourse = plan.slug.startsWith("course-");
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -109,7 +137,7 @@ export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
             <LogIn className="h-10 w-10 text-primary" />
             <div>
               <p className="font-display text-lg font-bold">Entre na sua conta primeiro</p>
-              <p className="text-sm text-muted-foreground mt-1">Você precisa estar logado para assinar um plano.</p>
+              <p className="text-sm text-muted-foreground mt-1">Você precisa estar logado para prosseguir.</p>
             </div>
             <Button asChild className="w-full h-12 rounded-full bg-primary font-bold shadow-gold hover:bg-primary/90">
               <Link to="/login">Entrar na conta</Link>
@@ -121,9 +149,11 @@ export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
         {/* Plan Summary */}
         {user && step !== "success" && (
           <div className="mx-6 mt-5 rounded-2xl border border-primary/30 bg-primary/8 px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Você está assinando</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+              {isCourse ? "Você está desbloqueando" : "Você está assinando"}
+            </p>
             <div className="flex items-center justify-between">
-              <p className="font-display text-lg font-bold">{plan.name}</p>
+              <p className="font-display text-lg font-bold truncate max-w-[220px]">{plan.name}</p>
               <Badge className="rounded-full bg-primary/20 text-primary border-primary/30 text-xs">{plan.period}</Badge>
             </div>
             <p className="text-sm font-semibold text-foreground mt-1">{plan.installmentLabel}</p>
@@ -219,25 +249,36 @@ export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
               <div className="absolute inset-0 animate-ping rounded-full bg-success/10" style={{ animationDuration: "2s" }} />
             </div>
             <div>
-              <p className="font-display text-2xl font-bold">Plano ativado! 🎉</p>
+              <p className="font-display text-2xl font-bold">{isCourse ? "Curso desbloqueado! 🎓" : "Plano ativado! 🎉"}</p>
               <p className="text-muted-foreground mt-2 text-sm">
-                <strong>{plan.name}</strong> está ativo.
-                Acesso liberado por <strong>{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</strong>.
+                {isCourse ? (
+                  <>Você adquiriu o curso <strong>{plan.name}</strong> com sucesso!</>
+                ) : (
+                  <><strong>{plan.name}</strong> está ativo. Acesso liberado por <strong>{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</strong>.</>
+                )}
               </p>
             </div>
             <div className="w-full rounded-2xl border border-success/30 bg-success/8 px-5 py-4 text-left space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-success mb-2">Resumo</p>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Plano</span><span className="font-semibold">{plan.name}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Duração</span><span className="font-semibold">{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Status</span><span className="text-success font-semibold">✓ Ativo</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{isCourse ? "Curso" : "Plano"}</span><span className="font-semibold truncate max-w-[180px]">{plan.name}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Acesso</span><span className="font-semibold">{isCourse ? "Vitalício" : (plan.periodRaw === "year" ? "1 ano" : "1 mês")}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Status</span><span className="text-success font-semibold">✓ Pago</span></div>
             </div>
             <div className="flex gap-3 w-full">
-              <Button onClick={() => { handleClose(false); navigate({ to: dashboardPath as any }); }} className="flex-1 h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold">
-                Acessar painel
-              </Button>
-              <Button variant="outline" onClick={() => { handleClose(false); navigate({ to: "/minha-assinatura" as any }); }} className="flex-1 h-12 rounded-full">
-                Minha assinatura
-              </Button>
+              {isCourse ? (
+                <Button onClick={() => { handleClose(false); navigate({ to: "/cursos" }); }} className="flex-1 h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold">
+                  Ir para meus cursos
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={() => { handleClose(false); navigate({ to: dashboardPath as any }); }} className="flex-1 h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold">
+                    Acessar painel
+                  </Button>
+                  <Button variant="outline" onClick={() => { handleClose(false); navigate({ to: "/minha-assinatura" as any }); }} className="flex-1 h-12 rounded-full">
+                    Minha assinatura
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

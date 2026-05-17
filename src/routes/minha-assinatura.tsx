@@ -27,6 +27,28 @@ function MinhaAssinaturaPage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<CheckoutPlan | null>(null);
 
+  const formatDateSafe = (date: any, pattern: string) => {
+    if (!date) return "N/A";
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "Data indisponível";
+      return format(d, pattern, { locale: ptBR });
+    } catch {
+      return "Data indisponível";
+    }
+  };
+
+  const formatDistanceSafe = (date: any) => {
+    if (!date) return "indisponível";
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "indisponível";
+      return formatDistanceToNow(d, { locale: ptBR, addSuffix: true });
+    } catch {
+      return "indisponível";
+    }
+  };
+
   const openRenew = () => {
     const isCompany = role === "company";
     setCheckoutPlan({
@@ -40,6 +62,17 @@ function MinhaAssinaturaPage() {
     });
     setCheckoutOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Carregando assinatura...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -62,11 +95,14 @@ function MinhaAssinaturaPage() {
 
   const StatusIcon = statusConfig.icon;
 
+  const isValidExpiry = expiresAt instanceof Date && !isNaN(expiresAt.getTime());
+
   // Progress bar: % of time remaining
   const progressPercent = (() => {
-    if (!isActive || !expiresAt) return 0;
+    if (!isActive || !isValidExpiry) return 0;
     const totalDays = plan?.includes("anual") || plan?.includes("year") ? 365 : 30;
-    const pct = Math.min(100, Math.max(0, (daysRemaining! / totalDays) * 100));
+    const remaining = daysRemaining ?? 0;
+    const pct = Math.min(100, Math.max(0, (remaining / totalDays) * 100));
     return Math.round(pct);
   })();
 
@@ -108,27 +144,27 @@ function MinhaAssinaturaPage() {
           )}
 
           {/* Expiry info */}
-          {isActive && expiresAt && (
+          {isActive && isValidExpiry && (
             <div className="mt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" /> Expira em
                 </span>
-                <span className="font-semibold">{format(expiresAt, "dd/MM/yyyy", { locale: ptBR })}</span>
+                <span className="font-semibold">{formatDateSafe(expiresAt, "dd/MM/yyyy")}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" /> Tempo restante
                 </span>
-                <span className={`font-bold ${daysRemaining! <= 7 ? "text-destructive" : "text-success"}`}>
-                  {daysRemaining} dias
+                <span className={`font-bold ${(daysRemaining ?? 0) <= 7 ? "text-destructive" : "text-success"}`}>
+                  {daysRemaining ?? 0} dias
                 </span>
               </div>
               {/* Progress bar */}
               <div className="mt-2">
                 <div className="h-2 w-full rounded-full bg-border/40 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-700 ${daysRemaining! <= 7 ? "bg-destructive" : "bg-success"}`}
+                    className={`h-full rounded-full transition-all duration-700 ${(daysRemaining ?? 0) <= 7 ? "bg-destructive" : "bg-success"}`}
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -137,9 +173,9 @@ function MinhaAssinaturaPage() {
             </div>
           )}
 
-          {isExpired && expiresAt && (
+          {isExpired && isValidExpiry && (
             <p className="mt-3 text-sm text-destructive font-medium">
-              Expirou {formatDistanceToNow(expiresAt, { locale: ptBR, addSuffix: true })}
+              Expirou {formatDistanceSafe(expiresAt)}
             </p>
           )}
 
@@ -228,7 +264,7 @@ function MinhaAssinaturaPage() {
                     <p className={`text-sm font-semibold ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>{n.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
                     <p className="text-xs text-muted-foreground/60 mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { locale: ptBR, addSuffix: true })}
+                      {formatDistanceSafe(n.created_at)}
                     </p>
                   </div>
                   {!n.read && <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />}

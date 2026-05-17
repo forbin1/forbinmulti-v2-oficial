@@ -3,14 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = "https://wuarslrenynwiflzgrjp.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1YXJzbHJlbnlud2lmbHpncmpwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODM0MzUxNSwiZXhwIjoyMDkzOTE5NTE1fQ.ik_1FgpXRk7L0vIigcQuJopin3592cjsicQ9aEDNvEE";
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 async function run() {
-  const { data, error } = await supabase.from('notifications').select('*').limit(1);
-  if (error) {
-    console.error("ERROR QUERYING NOTIFICATIONS:", error);
-  } else {
-    console.log("COLUMNS OF NOTIFICATIONS:", Object.keys(data[0] || {}));
-  }
+  const res = await fetch(`${supabaseUrl}/rest/v1/?apikey=${supabaseKey}`);
+  const schema = await res.json();
+  console.log("user_certificates columns:", Object.keys(schema.definitions?.user_certificates?.properties || {}));
 }
 run();
