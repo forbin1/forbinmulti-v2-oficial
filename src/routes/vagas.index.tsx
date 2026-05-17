@@ -24,7 +24,7 @@ import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 const fetchMappedJobs = async () => {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, companies(*), applications(count)")
+    .select("id, title, city, state, contract_type, modality, salary_min, salary_max, requirements, banner_url, created_at, companies(company_name, logo_url, username), applications(count)")
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 
@@ -52,6 +52,7 @@ const fetchMappedJobs = async () => {
     requirements: j.requirements ? j.requirements.split(",") : [],
     cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
   }));
+};
 export const Route = createFileRoute("/vagas/")({
   head: () => ({
     meta: [
