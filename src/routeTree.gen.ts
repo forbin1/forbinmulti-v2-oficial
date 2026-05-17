@@ -13,6 +13,7 @@ import { Route as RevisorCurriculoRouteImport } from './routes/revisor-curriculo
 import { Route as ProfissionalRouteImport } from './routes/profissional'
 import { Route as ProfissionaisAtivosRouteImport } from './routes/profissionais-ativos'
 import { Route as PlanosRouteImport } from './routes/planos'
+import { Route as PerfilEmpresaRouteImport } from './routes/perfil-empresa'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
@@ -25,10 +26,17 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VagasIndexRouteImport } from './routes/vagas.index'
+import { Route as EmpresaIndexRouteImport } from './routes/empresa.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as VagasJobIdRouteImport } from './routes/vagas.$jobId'
 import { Route as UHandleRouteImport } from './routes/u.$handle'
 import { Route as ProfissionaisAtivosIdRouteImport } from './routes/profissionais-ativos.$id'
+import { Route as EmpresaVendasRouteImport } from './routes/empresa.vendas'
+import { Route as EmpresaFavoritosRouteImport } from './routes/empresa.favoritos'
+import { Route as EmpresaConfiguracoesRouteImport } from './routes/empresa.configuracoes'
+import { Route as EmpresaCandidatosRouteImport } from './routes/empresa.candidatos'
+import { Route as EmpresaAfiliadosRouteImport } from './routes/empresa.afiliados'
+import { Route as EmpresaUsernameRouteImport } from './routes/empresa.$username'
 import { Route as CursosCourseIdRouteImport } from './routes/cursos.$courseId'
 import { Route as AdminVslRouteImport } from './routes/admin.vsl'
 import { Route as AdminVagasRouteImport } from './routes/admin.vagas'
@@ -38,6 +46,7 @@ import { Route as AdminLandingRouteImport } from './routes/admin.landing'
 import { Route as AdminExperienciasRouteImport } from './routes/admin.experiencias'
 import { Route as AdminCursosRouteImport } from './routes/admin.cursos'
 import { Route as AdminCertificadosRouteImport } from './routes/admin.certificados'
+import { Route as AdminAfiliadosRouteImport } from './routes/admin.afiliados'
 
 const RevisorCurriculoRoute = RevisorCurriculoRouteImport.update({
   id: '/revisor-curriculo',
@@ -57,6 +66,11 @@ const ProfissionaisAtivosRoute = ProfissionaisAtivosRouteImport.update({
 const PlanosRoute = PlanosRouteImport.update({
   id: '/planos',
   path: '/planos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilEmpresaRoute = PerfilEmpresaRouteImport.update({
+  id: '/perfil-empresa',
+  path: '/perfil-empresa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -119,6 +133,11 @@ const VagasIndexRoute = VagasIndexRouteImport.update({
   path: '/vagas/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmpresaIndexRoute = EmpresaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EmpresaRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -138,6 +157,36 @@ const ProfissionaisAtivosIdRoute = ProfissionaisAtivosIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ProfissionaisAtivosRoute,
+} as any)
+const EmpresaVendasRoute = EmpresaVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
+  getParentRoute: () => EmpresaRoute,
+} as any)
+const EmpresaFavoritosRoute = EmpresaFavoritosRouteImport.update({
+  id: '/favoritos',
+  path: '/favoritos',
+  getParentRoute: () => EmpresaRoute,
+} as any)
+const EmpresaConfiguracoesRoute = EmpresaConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => EmpresaRoute,
+} as any)
+const EmpresaCandidatosRoute = EmpresaCandidatosRouteImport.update({
+  id: '/candidatos',
+  path: '/candidatos',
+  getParentRoute: () => EmpresaRoute,
+} as any)
+const EmpresaAfiliadosRoute = EmpresaAfiliadosRouteImport.update({
+  id: '/afiliados',
+  path: '/afiliados',
+  getParentRoute: () => EmpresaRoute,
+} as any)
+const EmpresaUsernameRoute = EmpresaUsernameRouteImport.update({
+  id: '/$username',
+  path: '/$username',
+  getParentRoute: () => EmpresaRoute,
 } as any)
 const CursosCourseIdRoute = CursosCourseIdRouteImport.update({
   id: '/$courseId',
@@ -184,6 +233,11 @@ const AdminCertificadosRoute = AdminCertificadosRouteImport.update({
   path: '/certificados',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAfiliadosRoute = AdminAfiliadosRouteImport.update({
+  id: '/afiliados',
+  path: '/afiliados',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -193,14 +247,16 @@ export interface FileRoutesByFullPath {
   '/candidaturas': typeof CandidaturasRoute
   '/certificados': typeof CertificadosRoute
   '/cursos': typeof CursosRouteWithChildren
-  '/empresa': typeof EmpresaRoute
+  '/empresa': typeof EmpresaRouteWithChildren
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
+  '/perfil-empresa': typeof PerfilEmpresaRoute
   '/planos': typeof PlanosRoute
   '/profissionais-ativos': typeof ProfissionaisAtivosRouteWithChildren
   '/profissional': typeof ProfissionalRoute
   '/revisor-curriculo': typeof RevisorCurriculoRoute
+  '/admin/afiliados': typeof AdminAfiliadosRoute
   '/admin/certificados': typeof AdminCertificadosRoute
   '/admin/cursos': typeof AdminCursosRoute
   '/admin/experiencias': typeof AdminExperienciasRoute
@@ -210,10 +266,17 @@ export interface FileRoutesByFullPath {
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
+  '/empresa/$username': typeof EmpresaUsernameRoute
+  '/empresa/afiliados': typeof EmpresaAfiliadosRoute
+  '/empresa/candidatos': typeof EmpresaCandidatosRoute
+  '/empresa/configuracoes': typeof EmpresaConfiguracoesRoute
+  '/empresa/favoritos': typeof EmpresaFavoritosRoute
+  '/empresa/vendas': typeof EmpresaVendasRoute
   '/profissionais-ativos/$id': typeof ProfissionaisAtivosIdRoute
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/empresa/': typeof EmpresaIndexRoute
   '/vagas/': typeof VagasIndexRoute
 }
 export interface FileRoutesByTo {
@@ -223,14 +286,15 @@ export interface FileRoutesByTo {
   '/candidaturas': typeof CandidaturasRoute
   '/certificados': typeof CertificadosRoute
   '/cursos': typeof CursosRouteWithChildren
-  '/empresa': typeof EmpresaRoute
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
+  '/perfil-empresa': typeof PerfilEmpresaRoute
   '/planos': typeof PlanosRoute
   '/profissionais-ativos': typeof ProfissionaisAtivosRouteWithChildren
   '/profissional': typeof ProfissionalRoute
   '/revisor-curriculo': typeof RevisorCurriculoRoute
+  '/admin/afiliados': typeof AdminAfiliadosRoute
   '/admin/certificados': typeof AdminCertificadosRoute
   '/admin/cursos': typeof AdminCursosRoute
   '/admin/experiencias': typeof AdminExperienciasRoute
@@ -240,10 +304,17 @@ export interface FileRoutesByTo {
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
+  '/empresa/$username': typeof EmpresaUsernameRoute
+  '/empresa/afiliados': typeof EmpresaAfiliadosRoute
+  '/empresa/candidatos': typeof EmpresaCandidatosRoute
+  '/empresa/configuracoes': typeof EmpresaConfiguracoesRoute
+  '/empresa/favoritos': typeof EmpresaFavoritosRoute
+  '/empresa/vendas': typeof EmpresaVendasRoute
   '/profissionais-ativos/$id': typeof ProfissionaisAtivosIdRoute
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
   '/admin': typeof AdminIndexRoute
+  '/empresa': typeof EmpresaIndexRoute
   '/vagas': typeof VagasIndexRoute
 }
 export interface FileRoutesById {
@@ -255,14 +326,16 @@ export interface FileRoutesById {
   '/candidaturas': typeof CandidaturasRoute
   '/certificados': typeof CertificadosRoute
   '/cursos': typeof CursosRouteWithChildren
-  '/empresa': typeof EmpresaRoute
+  '/empresa': typeof EmpresaRouteWithChildren
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
+  '/perfil-empresa': typeof PerfilEmpresaRoute
   '/planos': typeof PlanosRoute
   '/profissionais-ativos': typeof ProfissionaisAtivosRouteWithChildren
   '/profissional': typeof ProfissionalRoute
   '/revisor-curriculo': typeof RevisorCurriculoRoute
+  '/admin/afiliados': typeof AdminAfiliadosRoute
   '/admin/certificados': typeof AdminCertificadosRoute
   '/admin/cursos': typeof AdminCursosRoute
   '/admin/experiencias': typeof AdminExperienciasRoute
@@ -272,10 +345,17 @@ export interface FileRoutesById {
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
+  '/empresa/$username': typeof EmpresaUsernameRoute
+  '/empresa/afiliados': typeof EmpresaAfiliadosRoute
+  '/empresa/candidatos': typeof EmpresaCandidatosRoute
+  '/empresa/configuracoes': typeof EmpresaConfiguracoesRoute
+  '/empresa/favoritos': typeof EmpresaFavoritosRoute
+  '/empresa/vendas': typeof EmpresaVendasRoute
   '/profissionais-ativos/$id': typeof ProfissionaisAtivosIdRoute
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/empresa/': typeof EmpresaIndexRoute
   '/vagas/': typeof VagasIndexRoute
 }
 export interface FileRouteTypes {
@@ -292,10 +372,12 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/feed'
     | '/login'
+    | '/perfil-empresa'
     | '/planos'
     | '/profissionais-ativos'
     | '/profissional'
     | '/revisor-curriculo'
+    | '/admin/afiliados'
     | '/admin/certificados'
     | '/admin/cursos'
     | '/admin/experiencias'
@@ -305,10 +387,17 @@ export interface FileRouteTypes {
     | '/admin/vagas'
     | '/admin/vsl'
     | '/cursos/$courseId'
+    | '/empresa/$username'
+    | '/empresa/afiliados'
+    | '/empresa/candidatos'
+    | '/empresa/configuracoes'
+    | '/empresa/favoritos'
+    | '/empresa/vendas'
     | '/profissionais-ativos/$id'
     | '/u/$handle'
     | '/vagas/$jobId'
     | '/admin/'
+    | '/empresa/'
     | '/vagas/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -318,14 +407,15 @@ export interface FileRouteTypes {
     | '/candidaturas'
     | '/certificados'
     | '/cursos'
-    | '/empresa'
     | '/favoritos'
     | '/feed'
     | '/login'
+    | '/perfil-empresa'
     | '/planos'
     | '/profissionais-ativos'
     | '/profissional'
     | '/revisor-curriculo'
+    | '/admin/afiliados'
     | '/admin/certificados'
     | '/admin/cursos'
     | '/admin/experiencias'
@@ -335,10 +425,17 @@ export interface FileRouteTypes {
     | '/admin/vagas'
     | '/admin/vsl'
     | '/cursos/$courseId'
+    | '/empresa/$username'
+    | '/empresa/afiliados'
+    | '/empresa/candidatos'
+    | '/empresa/configuracoes'
+    | '/empresa/favoritos'
+    | '/empresa/vendas'
     | '/profissionais-ativos/$id'
     | '/u/$handle'
     | '/vagas/$jobId'
     | '/admin'
+    | '/empresa'
     | '/vagas'
   id:
     | '__root__'
@@ -353,10 +450,12 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/feed'
     | '/login'
+    | '/perfil-empresa'
     | '/planos'
     | '/profissionais-ativos'
     | '/profissional'
     | '/revisor-curriculo'
+    | '/admin/afiliados'
     | '/admin/certificados'
     | '/admin/cursos'
     | '/admin/experiencias'
@@ -366,10 +465,17 @@ export interface FileRouteTypes {
     | '/admin/vagas'
     | '/admin/vsl'
     | '/cursos/$courseId'
+    | '/empresa/$username'
+    | '/empresa/afiliados'
+    | '/empresa/candidatos'
+    | '/empresa/configuracoes'
+    | '/empresa/favoritos'
+    | '/empresa/vendas'
     | '/profissionais-ativos/$id'
     | '/u/$handle'
     | '/vagas/$jobId'
     | '/admin/'
+    | '/empresa/'
     | '/vagas/'
   fileRoutesById: FileRoutesById
 }
@@ -381,10 +487,11 @@ export interface RootRouteChildren {
   CandidaturasRoute: typeof CandidaturasRoute
   CertificadosRoute: typeof CertificadosRoute
   CursosRoute: typeof CursosRouteWithChildren
-  EmpresaRoute: typeof EmpresaRoute
+  EmpresaRoute: typeof EmpresaRouteWithChildren
   FavoritosRoute: typeof FavoritosRoute
   FeedRoute: typeof FeedRoute
   LoginRoute: typeof LoginRoute
+  PerfilEmpresaRoute: typeof PerfilEmpresaRoute
   PlanosRoute: typeof PlanosRoute
   ProfissionaisAtivosRoute: typeof ProfissionaisAtivosRouteWithChildren
   ProfissionalRoute: typeof ProfissionalRoute
@@ -422,6 +529,13 @@ declare module '@tanstack/react-router' {
       path: '/planos'
       fullPath: '/planos'
       preLoaderRoute: typeof PlanosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil-empresa': {
+      id: '/perfil-empresa'
+      path: '/perfil-empresa'
+      fullPath: '/perfil-empresa'
+      preLoaderRoute: typeof PerfilEmpresaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -508,6 +622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VagasIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/empresa/': {
+      id: '/empresa/'
+      path: '/'
+      fullPath: '/empresa/'
+      preLoaderRoute: typeof EmpresaIndexRouteImport
+      parentRoute: typeof EmpresaRoute
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
@@ -535,6 +656,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/profissionais-ativos/$id'
       preLoaderRoute: typeof ProfissionaisAtivosIdRouteImport
       parentRoute: typeof ProfissionaisAtivosRoute
+    }
+    '/empresa/vendas': {
+      id: '/empresa/vendas'
+      path: '/vendas'
+      fullPath: '/empresa/vendas'
+      preLoaderRoute: typeof EmpresaVendasRouteImport
+      parentRoute: typeof EmpresaRoute
+    }
+    '/empresa/favoritos': {
+      id: '/empresa/favoritos'
+      path: '/favoritos'
+      fullPath: '/empresa/favoritos'
+      preLoaderRoute: typeof EmpresaFavoritosRouteImport
+      parentRoute: typeof EmpresaRoute
+    }
+    '/empresa/configuracoes': {
+      id: '/empresa/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/empresa/configuracoes'
+      preLoaderRoute: typeof EmpresaConfiguracoesRouteImport
+      parentRoute: typeof EmpresaRoute
+    }
+    '/empresa/candidatos': {
+      id: '/empresa/candidatos'
+      path: '/candidatos'
+      fullPath: '/empresa/candidatos'
+      preLoaderRoute: typeof EmpresaCandidatosRouteImport
+      parentRoute: typeof EmpresaRoute
+    }
+    '/empresa/afiliados': {
+      id: '/empresa/afiliados'
+      path: '/afiliados'
+      fullPath: '/empresa/afiliados'
+      preLoaderRoute: typeof EmpresaAfiliadosRouteImport
+      parentRoute: typeof EmpresaRoute
+    }
+    '/empresa/$username': {
+      id: '/empresa/$username'
+      path: '/$username'
+      fullPath: '/empresa/$username'
+      preLoaderRoute: typeof EmpresaUsernameRouteImport
+      parentRoute: typeof EmpresaRoute
     }
     '/cursos/$courseId': {
       id: '/cursos/$courseId'
@@ -599,10 +762,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCertificadosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/afiliados': {
+      id: '/admin/afiliados'
+      path: '/afiliados'
+      fullPath: '/admin/afiliados'
+      preLoaderRoute: typeof AdminAfiliadosRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminAfiliadosRoute: typeof AdminAfiliadosRoute
   AdminCertificadosRoute: typeof AdminCertificadosRoute
   AdminCursosRoute: typeof AdminCursosRoute
   AdminExperienciasRoute: typeof AdminExperienciasRoute
@@ -615,6 +786,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAfiliadosRoute: AdminAfiliadosRoute,
   AdminCertificadosRoute: AdminCertificadosRoute,
   AdminCursosRoute: AdminCursosRoute,
   AdminExperienciasRoute: AdminExperienciasRoute,
@@ -639,6 +811,29 @@ const CursosRouteChildren: CursosRouteChildren = {
 const CursosRouteWithChildren =
   CursosRoute._addFileChildren(CursosRouteChildren)
 
+interface EmpresaRouteChildren {
+  EmpresaUsernameRoute: typeof EmpresaUsernameRoute
+  EmpresaAfiliadosRoute: typeof EmpresaAfiliadosRoute
+  EmpresaCandidatosRoute: typeof EmpresaCandidatosRoute
+  EmpresaConfiguracoesRoute: typeof EmpresaConfiguracoesRoute
+  EmpresaFavoritosRoute: typeof EmpresaFavoritosRoute
+  EmpresaVendasRoute: typeof EmpresaVendasRoute
+  EmpresaIndexRoute: typeof EmpresaIndexRoute
+}
+
+const EmpresaRouteChildren: EmpresaRouteChildren = {
+  EmpresaUsernameRoute: EmpresaUsernameRoute,
+  EmpresaAfiliadosRoute: EmpresaAfiliadosRoute,
+  EmpresaCandidatosRoute: EmpresaCandidatosRoute,
+  EmpresaConfiguracoesRoute: EmpresaConfiguracoesRoute,
+  EmpresaFavoritosRoute: EmpresaFavoritosRoute,
+  EmpresaVendasRoute: EmpresaVendasRoute,
+  EmpresaIndexRoute: EmpresaIndexRoute,
+}
+
+const EmpresaRouteWithChildren =
+  EmpresaRoute._addFileChildren(EmpresaRouteChildren)
+
 interface ProfissionaisAtivosRouteChildren {
   ProfissionaisAtivosIdRoute: typeof ProfissionaisAtivosIdRoute
 }
@@ -658,10 +853,11 @@ const rootRouteChildren: RootRouteChildren = {
   CandidaturasRoute: CandidaturasRoute,
   CertificadosRoute: CertificadosRoute,
   CursosRoute: CursosRouteWithChildren,
-  EmpresaRoute: EmpresaRoute,
+  EmpresaRoute: EmpresaRouteWithChildren,
   FavoritosRoute: FavoritosRoute,
   FeedRoute: FeedRoute,
   LoginRoute: LoginRoute,
+  PerfilEmpresaRoute: PerfilEmpresaRoute,
   PlanosRoute: PlanosRoute,
   ProfissionaisAtivosRoute: ProfissionaisAtivosRouteWithChildren,
   ProfissionalRoute: ProfissionalRoute,
