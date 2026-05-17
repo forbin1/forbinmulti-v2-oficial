@@ -1,4 +1,4 @@
-﻿
+
 -- User roles enum
 CREATE TYPE public.app_role AS ENUM ('professional', 'company', 'admin');
 
@@ -311,7 +311,8 @@ CREATE TABLE IF NOT EXISTS public.jobs (
   benefits TEXT,
   is_published BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  banner_url TEXT
 );
 
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
