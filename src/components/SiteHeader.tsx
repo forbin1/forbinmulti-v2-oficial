@@ -234,7 +234,7 @@ export function SiteHeader() {
                   {role === "company" && (
                     <DropdownMenuItem asChild>
                       <Link 
-                        to={companyUsername ? "/empresa/$username" : "/perfil-empresa"} 
+                        to={companyUsername ? "/perfil/$username" : "/perfil-empresa"} 
                         params={companyUsername ? { username: companyUsername } : undefined} 
                         className="cursor-pointer"
                       >
@@ -301,7 +301,7 @@ export function SiteHeader() {
                 )}
                 {user && role === "company" && (
                   <Link
-                    to={companyUsername ? "/empresa/$username" : "/perfil-empresa"}
+                    to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
                     params={companyUsername ? { username: companyUsername } : undefined}
                     onClick={() => setOpen(false)}
                     className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"

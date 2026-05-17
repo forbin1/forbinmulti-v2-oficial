@@ -31,12 +31,12 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as VagasJobIdRouteImport } from './routes/vagas.$jobId'
 import { Route as UHandleRouteImport } from './routes/u.$handle'
 import { Route as ProfissionaisAtivosIdRouteImport } from './routes/profissionais-ativos.$id'
+import { Route as PerfilUsernameRouteImport } from './routes/perfil.$username'
 import { Route as EmpresaVendasRouteImport } from './routes/empresa.vendas'
 import { Route as EmpresaFavoritosRouteImport } from './routes/empresa.favoritos'
 import { Route as EmpresaConfiguracoesRouteImport } from './routes/empresa.configuracoes'
 import { Route as EmpresaCandidatosRouteImport } from './routes/empresa.candidatos'
 import { Route as EmpresaAfiliadosRouteImport } from './routes/empresa.afiliados'
-import { Route as EmpresaUsernameRouteImport } from './routes/empresa.$username'
 import { Route as CursosCourseIdRouteImport } from './routes/cursos.$courseId'
 import { Route as AdminVslRouteImport } from './routes/admin.vsl'
 import { Route as AdminVagasRouteImport } from './routes/admin.vagas'
@@ -158,6 +158,11 @@ const ProfissionaisAtivosIdRoute = ProfissionaisAtivosIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ProfissionaisAtivosRoute,
 } as any)
+const PerfilUsernameRoute = PerfilUsernameRouteImport.update({
+  id: '/perfil/$username',
+  path: '/perfil/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmpresaVendasRoute = EmpresaVendasRouteImport.update({
   id: '/vendas',
   path: '/vendas',
@@ -181,11 +186,6 @@ const EmpresaCandidatosRoute = EmpresaCandidatosRouteImport.update({
 const EmpresaAfiliadosRoute = EmpresaAfiliadosRouteImport.update({
   id: '/afiliados',
   path: '/afiliados',
-  getParentRoute: () => EmpresaRoute,
-} as any)
-const EmpresaUsernameRoute = EmpresaUsernameRouteImport.update({
-  id: '/$username',
-  path: '/$username',
   getParentRoute: () => EmpresaRoute,
 } as any)
 const CursosCourseIdRoute = CursosCourseIdRouteImport.update({
@@ -266,12 +266,12 @@ export interface FileRoutesByFullPath {
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
-  '/empresa/$username': typeof EmpresaUsernameRoute
   '/empresa/afiliados': typeof EmpresaAfiliadosRoute
   '/empresa/candidatos': typeof EmpresaCandidatosRoute
   '/empresa/configuracoes': typeof EmpresaConfiguracoesRoute
   '/empresa/favoritos': typeof EmpresaFavoritosRoute
   '/empresa/vendas': typeof EmpresaVendasRoute
+  '/perfil/$username': typeof PerfilUsernameRoute
   '/profissionais-ativos/$id': typeof ProfissionaisAtivosIdRoute
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
@@ -304,12 +304,12 @@ export interface FileRoutesByTo {
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
-  '/empresa/$username': typeof EmpresaUsernameRoute
   '/empresa/afiliados': typeof EmpresaAfiliadosRoute
   '/empresa/candidatos': typeof EmpresaCandidatosRoute
   '/empresa/configuracoes': typeof EmpresaConfiguracoesRoute
   '/empresa/favoritos': typeof EmpresaFavoritosRoute
   '/empresa/vendas': typeof EmpresaVendasRoute
+  '/perfil/$username': typeof PerfilUsernameRoute
   '/profissionais-ativos/$id': typeof ProfissionaisAtivosIdRoute
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
@@ -345,12 +345,12 @@ export interface FileRoutesById {
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
-  '/empresa/$username': typeof EmpresaUsernameRoute
   '/empresa/afiliados': typeof EmpresaAfiliadosRoute
   '/empresa/candidatos': typeof EmpresaCandidatosRoute
   '/empresa/configuracoes': typeof EmpresaConfiguracoesRoute
   '/empresa/favoritos': typeof EmpresaFavoritosRoute
   '/empresa/vendas': typeof EmpresaVendasRoute
+  '/perfil/$username': typeof PerfilUsernameRoute
   '/profissionais-ativos/$id': typeof ProfissionaisAtivosIdRoute
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
@@ -387,12 +387,12 @@ export interface FileRouteTypes {
     | '/admin/vagas'
     | '/admin/vsl'
     | '/cursos/$courseId'
-    | '/empresa/$username'
     | '/empresa/afiliados'
     | '/empresa/candidatos'
     | '/empresa/configuracoes'
     | '/empresa/favoritos'
     | '/empresa/vendas'
+    | '/perfil/$username'
     | '/profissionais-ativos/$id'
     | '/u/$handle'
     | '/vagas/$jobId'
@@ -425,12 +425,12 @@ export interface FileRouteTypes {
     | '/admin/vagas'
     | '/admin/vsl'
     | '/cursos/$courseId'
-    | '/empresa/$username'
     | '/empresa/afiliados'
     | '/empresa/candidatos'
     | '/empresa/configuracoes'
     | '/empresa/favoritos'
     | '/empresa/vendas'
+    | '/perfil/$username'
     | '/profissionais-ativos/$id'
     | '/u/$handle'
     | '/vagas/$jobId'
@@ -465,12 +465,12 @@ export interface FileRouteTypes {
     | '/admin/vagas'
     | '/admin/vsl'
     | '/cursos/$courseId'
-    | '/empresa/$username'
     | '/empresa/afiliados'
     | '/empresa/candidatos'
     | '/empresa/configuracoes'
     | '/empresa/favoritos'
     | '/empresa/vendas'
+    | '/perfil/$username'
     | '/profissionais-ativos/$id'
     | '/u/$handle'
     | '/vagas/$jobId'
@@ -496,6 +496,7 @@ export interface RootRouteChildren {
   ProfissionaisAtivosRoute: typeof ProfissionaisAtivosRouteWithChildren
   ProfissionalRoute: typeof ProfissionalRoute
   RevisorCurriculoRoute: typeof RevisorCurriculoRoute
+  PerfilUsernameRoute: typeof PerfilUsernameRoute
   UHandleRoute: typeof UHandleRoute
   VagasJobIdRoute: typeof VagasJobIdRoute
   VagasIndexRoute: typeof VagasIndexRoute
@@ -657,6 +658,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfissionaisAtivosIdRouteImport
       parentRoute: typeof ProfissionaisAtivosRoute
     }
+    '/perfil/$username': {
+      id: '/perfil/$username'
+      path: '/perfil/$username'
+      fullPath: '/perfil/$username'
+      preLoaderRoute: typeof PerfilUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/empresa/vendas': {
       id: '/empresa/vendas'
       path: '/vendas'
@@ -690,13 +698,6 @@ declare module '@tanstack/react-router' {
       path: '/afiliados'
       fullPath: '/empresa/afiliados'
       preLoaderRoute: typeof EmpresaAfiliadosRouteImport
-      parentRoute: typeof EmpresaRoute
-    }
-    '/empresa/$username': {
-      id: '/empresa/$username'
-      path: '/$username'
-      fullPath: '/empresa/$username'
-      preLoaderRoute: typeof EmpresaUsernameRouteImport
       parentRoute: typeof EmpresaRoute
     }
     '/cursos/$courseId': {
@@ -812,7 +813,6 @@ const CursosRouteWithChildren =
   CursosRoute._addFileChildren(CursosRouteChildren)
 
 interface EmpresaRouteChildren {
-  EmpresaUsernameRoute: typeof EmpresaUsernameRoute
   EmpresaAfiliadosRoute: typeof EmpresaAfiliadosRoute
   EmpresaCandidatosRoute: typeof EmpresaCandidatosRoute
   EmpresaConfiguracoesRoute: typeof EmpresaConfiguracoesRoute
@@ -822,7 +822,6 @@ interface EmpresaRouteChildren {
 }
 
 const EmpresaRouteChildren: EmpresaRouteChildren = {
-  EmpresaUsernameRoute: EmpresaUsernameRoute,
   EmpresaAfiliadosRoute: EmpresaAfiliadosRoute,
   EmpresaCandidatosRoute: EmpresaCandidatosRoute,
   EmpresaConfiguracoesRoute: EmpresaConfiguracoesRoute,
@@ -862,6 +861,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfissionaisAtivosRoute: ProfissionaisAtivosRouteWithChildren,
   ProfissionalRoute: ProfissionalRoute,
   RevisorCurriculoRoute: RevisorCurriculoRoute,
+  PerfilUsernameRoute: PerfilUsernameRoute,
   UHandleRoute: UHandleRoute,
   VagasJobIdRoute: VagasJobIdRoute,
   VagasIndexRoute: VagasIndexRoute,

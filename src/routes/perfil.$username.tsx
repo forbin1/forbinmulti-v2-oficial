@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/empresa/$username")({
+export const Route = createFileRoute("/perfil/$username")({
   loader: async ({ params }) => {
     const { data: company, error } = await supabase
       .from("companies")
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/empresa/$username")({
 
 function EmpresaPublicProfile() {
   const { company: initialCompany } = Route.useLoaderData();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [company, setCompany] = useState(initialCompany);
   const [jobs, setJobs] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([
@@ -139,7 +139,7 @@ function EmpresaPublicProfile() {
 
           if (error) throw error;
           setCompany((prev: any) => ({ ...prev, cover_url: base64 }));
-          toast.success("Foto de capa atualizada!");
+          toast.success("Foto de capa updated!");
         }
       };
       reader.readAsDataURL(file);

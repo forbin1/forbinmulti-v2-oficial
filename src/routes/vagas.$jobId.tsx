@@ -257,7 +257,15 @@ function JobDetail() {
               ) : (
                 <Button
                   size="lg"
-                  onClick={() => gate(() => setOpen(true), "Faça login para se candidatar")}
+                  onClick={() => {
+                    if (user && role !== "professional") {
+                      toast.error("Apenas profissionais de segurança podem se candidatar às vagas!", {
+                        description: "Empresas e administradores não possuem currículos profissionais ativos."
+                      });
+                      return;
+                    }
+                    gate(() => setOpen(true), "Faça login para se candidatar");
+                  }}
                   className="h-14 w-full rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90"
                 >
                   <Send className="mr-2 h-5 w-5" /> Candidatar-se

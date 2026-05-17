@@ -47,7 +47,7 @@ function PerfilEmpresa() {
   useEffect(() => {
     if (company?.username) {
       navigate({
-        to: "/empresa/$username",
+        to: "/perfil/$username",
         params: { username: company.username },
         replace: true
       });
@@ -194,7 +194,7 @@ function PerfilEmpresa() {
 
   const handleShare = () => {
     const link = company?.username 
-      ? `${window.location.origin}/empresa/${company.username}`
+      ? `${window.location.origin}/perfil/${company.username}`
       : `${window.location.origin}/perfil-empresa`;
     navigator.clipboard.writeText(link);
     toast.success("Link do perfil copiado!", {

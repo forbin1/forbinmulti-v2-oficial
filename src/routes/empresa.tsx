@@ -89,7 +89,7 @@ function EmpresaSidebarContents({ onNavigate }: { onNavigate?: () => void }) {
           Voltar à plataforma
         </Link>
         <Link
-          to={username ? "/empresa/$username" : "/perfil-empresa"}
+          to={username ? "/perfil/$username" : "/perfil-empresa"}
           params={username ? { username } : undefined}
           className="flex w-full items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
         >

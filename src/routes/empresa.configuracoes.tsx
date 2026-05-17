@@ -205,7 +205,7 @@ function EmpresaConfiguracoes() {
                 <Label>Nome de Usuário (Slug do Perfil) *</Label>
                 <div className="flex rounded-xl border border-border bg-surface overflow-hidden">
                   <span className="flex items-center px-3 bg-muted text-xs text-muted-foreground border-r border-border select-none">
-                    forbin.com/empresa/
+                    forbin.com/perfil/
                   </span>
                   <Input 
                     value={username} 
@@ -216,7 +216,7 @@ function EmpresaConfiguracoes() {
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Seu perfil público estará em: <strong className="text-primary">/empresa/{username.toLowerCase().replace(/[^a-z0-9-_]/g, "") || "seu-usuario"}</strong>
+                  Seu perfil público estará em: <strong className="text-primary">/perfil/{username.toLowerCase().replace(/[^a-z0-9-_]/g, "") || "seu-usuario"}</strong>
                 </p>
               </div>
               <div className="space-y-2">
