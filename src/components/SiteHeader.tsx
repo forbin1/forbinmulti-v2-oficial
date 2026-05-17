@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Bell, Menu, Search, LogOut, User, BookOpen, MapPin, Briefcase } from "lucide-react";
+import { Bell, Menu, Search, LogOut, User, BookOpen, MapPin, Briefcase, Building2 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
@@ -210,6 +210,14 @@ export function SiteHeader() {
                       {dashboardLabel}
                     </Link>
                   </DropdownMenuItem>
+                  {role === "company" && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/perfil-empresa" className="cursor-pointer">
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Meu Perfil Empresa
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -264,6 +272,15 @@ export function SiteHeader() {
                     className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     {dashboardLabel}
+                  </Link>
+                )}
+                {user && role === "company" && (
+                  <Link
+                    to="/perfil-empresa"
+                    onClick={() => setOpen(false)}
+                    className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    Meu Perfil Empresa
                   </Link>
                 )}
               </nav>
