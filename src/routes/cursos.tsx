@@ -108,11 +108,11 @@ function CursosPage() {
       {/* Hero Banner - Full Width */}
       {heroCourse && (
         <section className="relative w-full">
-          <div className="relative aspect-video w-full overflow-hidden">
+          <div className="relative w-full h-[50vh] sm:h-[400px] lg:h-[480px] overflow-hidden">
             <img
               src={heroCourse.thumbnail_url || "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1920&h=640&fit=crop"}
               alt={heroCourse.title}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover object-center"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-transparent" />
