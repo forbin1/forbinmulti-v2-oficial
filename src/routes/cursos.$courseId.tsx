@@ -21,6 +21,8 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useSubscription } from "@/hooks/use-subscription";
+import { CheckoutModal } from "@/components/CheckoutModal";
 
 export const Route = createFileRoute("/cursos/$courseId")({
   head: () => ({ meta: [{ title: "Curso — FORBIN MultiEmpresas" }] }),
@@ -65,6 +67,7 @@ function CourseDetailPage() {
   const { courseId } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { isActive: hasActivePlan, loading: subLoading } = useSubscription();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -78,6 +81,7 @@ function CourseDetailPage() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [adminCertificate, setAdminCertificate] = useState<any>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   useEffect(() => {
     void loadAll();
@@ -129,12 +133,26 @@ function CourseDetailPage() {
       navigate({ to: "/login" });
       return;
     }
+
+    const freeCourse = course ? course.price === null || course.price === 0 : true;
+
+    // Se o curso for grátis, exige plano ativo (exceto para admin)
+    if (freeCourse && user.email !== "admin@gmail.com" && !hasActivePlan) {
+      toast.error("Você precisa de uma assinatura ativa para acessar cursos gratuitos!");
+      navigate({ to: "/planos" });
+      return;
+    }
+
     setEnrolling(true);
     const { error } = await supabase.from("enrollments").insert({ user_id: user.id, course_id: courseId });
     setEnrolling(false);
-    if (error) return toast.error("Erro ao se matricular");
+    if (error) {
+      console.error("Enrollment error:", error);
+      return toast.error("Erro ao se matricular: " + error.message);
+    }
     setEnrolled(true);
     toast.success("Matrícula realizada!");
+    void loadAll();
   }
 
   // chama quando o vídeo termina
@@ -351,7 +369,7 @@ function CourseDetailPage() {
                     )}
                     <Button
                       className="w-full rounded-full bg-primary text-primary-foreground shadow-gold hover:bg-primary/90"
-                      onClick={handleEnroll}
+                      onClick={isFree ? handleEnroll : () => setCheckoutOpen(true)}
                       disabled={enrolling}
                     >
                       {enrolling ? "Matriculando..." : isFree ? "Começar agora — Grátis" : "Comprar e Começar"}
@@ -606,6 +624,27 @@ function CourseDetailPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Checkout modal */}
+      {course && !isFree && (
+        <CheckoutModal
+          open={checkoutOpen}
+          onOpenChange={setCheckoutOpen}
+          plan={{
+            name: course.title,
+            installmentLabel: `R$ ${course.price?.toFixed(2).replace(".", ",")}`,
+            pixLabel: `R$ ${course.price?.toFixed(2).replace(".", ",")}`,
+            period: "Acesso Vitalício",
+            audience: "professional",
+            periodRaw: "month",
+            slug: `course-${course.id}`,
+          }}
+          onSuccess={() => {
+            setEnrolled(true);
+            void loadAll();
+          }}
+        />
       )}
     </div>
   );

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { activateSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate, Link } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 
 export type CheckoutPlan = {
   name: string;
