@@ -679,15 +679,55 @@ function CourseDetailPage() {
             </div>
             
             <div className="flex items-center gap-3">
-              <Button asChild variant="default" className="rounded-full shadow-gold bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:flex">
-                <a href={materialUrl} target="_blank" rel="noreferrer" download>
-                  <Download className="mr-2 h-4 w-4" /> Baixar Arquivo
-                </a>
+              <Button 
+                variant="default" 
+                className="rounded-full shadow-gold bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:flex"
+                onClick={async () => {
+                  try {
+                    toast.loading("Iniciando download...", { id: "downloading" });
+                    const res = await fetch(materialUrl);
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Material_${course.title.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    toast.success("Download concluído!", { id: "downloading" });
+                  } catch (e) {
+                    toast.error("Erro ao tentar baixar o arquivo.", { id: "downloading" });
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" /> Baixar Arquivo
               </Button>
-              <Button asChild variant="default" size="icon" className="rounded-full shadow-gold bg-primary text-primary-foreground hover:bg-primary/90 sm:hidden">
-                <a href={materialUrl} target="_blank" rel="noreferrer" download title="Baixar Arquivo">
-                  <Download className="h-4 w-4" />
-                </a>
+              <Button 
+                variant="default" 
+                size="icon" 
+                className="rounded-full shadow-gold bg-primary text-primary-foreground hover:bg-primary/90 sm:hidden"
+                title="Baixar Arquivo"
+                onClick={async () => {
+                  try {
+                    toast.loading("Baixando...", { id: "downloading" });
+                    const res = await fetch(materialUrl);
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Material_${course.title.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    toast.success("Concluído!", { id: "downloading" });
+                  } catch (e) {
+                    toast.error("Erro no download", { id: "downloading" });
+                  }
+                }}
+              >
+                <Download className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
