@@ -56,12 +56,20 @@ export function SiteHeader() {
   const { user, role, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
+  const [companyUsername, setCompanyUsername] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       const load = async () => {
         const { data } = await supabase.from("profiles").select("full_name, avatar_url").eq("user_id", user.id).maybeSingle();
         if (data) setProfile(data);
+
+        if (role === "company") {
+          const { data: comp } = await supabase.from("companies").select("username").eq("user_id", user.id).maybeSingle();
+          if (comp?.username) {
+            setCompanyUsername(comp.username);
+          }
+        }
       };
       load();
 
@@ -70,9 +78,22 @@ export function SiteHeader() {
           setProfile(payload.new);
         })
         .subscribe();
-      return () => { supabase.removeChannel(channel); };
+
+      let companyChannel: any = null;
+      if (role === "company") {
+        companyChannel = supabase.channel(`company-hdr-${user.id}`)
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "companies", filter: `user_id=eq.${user.id}` }, (payload) => {
+            setCompanyUsername(payload.new.username || null);
+          })
+          .subscribe();
+      }
+
+      return () => { 
+        supabase.removeChannel(channel); 
+        if (companyChannel) supabase.removeChannel(companyChannel);
+      };
     }
-  }, [user]);
+  }, [user, role]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -212,7 +233,11 @@ export function SiteHeader() {
                   </DropdownMenuItem>
                   {role === "company" && (
                     <DropdownMenuItem asChild>
-                      <Link to="/perfil-empresa" className="cursor-pointer">
+                      <Link 
+                        to={companyUsername ? "/empresa/$username" : "/perfil-empresa"} 
+                        params={companyUsername ? { username: companyUsername } : undefined} 
+                        className="cursor-pointer"
+                      >
                         <Building2 className="mr-2 h-4 w-4" />
                         Meu Perfil
                       </Link>
@@ -276,7 +301,8 @@ export function SiteHeader() {
                 )}
                 {user && role === "company" && (
                   <Link
-                    to="/perfil-empresa"
+                    to={companyUsername ? "/empresa/$username" : "/perfil-empresa"}
+                    params={companyUsername ? { username: companyUsername } : undefined}
                     onClick={() => setOpen(false)}
                     className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
