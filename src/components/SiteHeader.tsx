@@ -1,10 +1,14 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { Bell, Menu, Search, LogOut, User, BookOpen, MapPin, Briefcase, Building2 } from "lucide-react";
+import { Bell, Menu, Search, LogOut, User, BookOpen, MapPin, Briefcase, Building2, CreditCard } from "lucide-react";
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useNotifications } from "@/hooks/use-notifications";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useAuth } from "@/hooks/use-auth";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,12 +55,71 @@ const NAV_ADMIN: NavItem[] = [
   { to: "/favoritos", label: "Favoritos" },
 ];
 
+function NotificationsContent({ notifications, unreadCount, markRead, markAllRead }: any) {
+  const notifIcons: Record<string, string> = { success: "✅", warning: "⚠️", error: "❌", info: "ℹ️" };
+  
+  return (
+    <div className="flex flex-col h-full max-h-[450px]">
+      <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3 shrink-0">
+        <h4 className="font-display text-sm font-bold flex items-center gap-1.5">
+          <Bell className="h-4 w-4 text-primary" /> Notificações
+          {unreadCount > 0 && (
+            <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              {unreadCount}
+            </span>
+          )}
+        </h4>
+        {unreadCount > 0 && (
+          <button onClick={markAllRead} className="text-xs text-primary hover:underline font-semibold transition-all">
+            Marcar todas como lido
+          </button>
+        )}
+      </div>
+      
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
+            <p className="text-xs text-muted-foreground">Nenhuma notificação por enquanto.</p>
+          </div>
+        ) : (
+          notifications.map((n: any) => (
+            <div
+              key={n.id}
+              onClick={() => markRead(n.id)}
+              className={`flex items-start gap-2.5 rounded-xl p-2.5 cursor-pointer transition hover:bg-accent/40 border border-transparent ${!n.read ? "bg-primary/5 border-primary/10" : ""}`}
+            >
+              <span className="text-base shrink-0 mt-0.5">{notifIcons[n.type] ?? "ℹ️"}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-bold leading-snug ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>{n.title}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">{n.message}</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-1">
+                  {formatDistanceToNow(new Date(n.created_at), { locale: ptBR, addSuffix: true })}
+                </p>
+              </div>
+              {!n.read && <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
+            </div>
+          ))
+        )}
+      </div>
+      
+      <div className="border-t border-border/40 pt-2.5 mt-2.5 text-center shrink-0">
+        <Link to="/minha-assinatura" className="text-xs text-primary hover:underline font-semibold block py-1">
+          Ver todas em Minha Assinatura
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { user, role, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [companyUsername, setCompanyUsername] = useState<string | null>(null);
+  
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   useEffect(() => {
     if (user) {
@@ -202,9 +265,26 @@ export function SiteHeader() {
 
           {!loading && user ? (
             <>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Bell className="h-5 w-5" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground animate-pulse shadow-gold">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 rounded-3xl border border-border/60 bg-card p-4 shadow-2xl backdrop-blur-xl z-50">
+                  <NotificationsContent 
+                    notifications={notifications} 
+                    unreadCount={unreadCount} 
+                    markRead={markRead} 
+                    markAllRead={markAllRead} 
+                  />
+                </PopoverContent>
+              </Popover>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="rounded-full overflow-hidden p-0 h-10 w-10">
@@ -243,6 +323,12 @@ export function SiteHeader() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem asChild>
+                    <Link to="/minha-assinatura" className="cursor-pointer">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Minha Assinatura
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -263,72 +349,113 @@ export function SiteHeader() {
           ) : null}
         </div>
 
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <button
-              aria-label="Abrir menu"
-              className="ml-auto rounded-full border border-border p-2 lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[85vw] max-w-sm overflow-y-auto p-0">
-            <div className="flex h-full flex-col">
-              <div className="border-b border-border/60 px-6 py-5">
-                <Logo />
-              </div>
-              <nav className="flex flex-1 flex-col gap-1 px-4 py-4">
-                {nav.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                    activeProps={{ className: "text-primary bg-accent" }}
-                    activeOptions={{ exact: item.to === "/" }}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-                {user && (
-                  <Link
-                    to={dashboardLink}
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    {dashboardLabel}
-                  </Link>
-                )}
-                {user && role === "company" && (
-                  <Link
-                    to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
-                    params={companyUsername ? { username: companyUsername } : undefined}
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    Meu Perfil
-                  </Link>
-                )}
-              </nav>
-              <div className="border-t border-border/60 p-4">
-                {user ? (
-                  <Button onClick={handleSignOut} variant="outline" className="w-full rounded-full">
-                    <LogOut className="mr-2 h-4 w-4" /> Sair
-                  </Button>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button asChild variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
-                      <Link to="/login">Entrar</Link>
+        <div className="ml-auto flex items-center gap-2 lg:hidden">
+          {/* Mobile Notifications Button & Drawer */}
+          {user && (
+            <Sheet>
+              <SheetTrigger asChild>
+                <button
+                  aria-label="Abrir notificações"
+                  className="rounded-full border border-border p-2 relative text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground animate-pulse shadow-gold">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[85vw] max-w-sm overflow-y-auto p-4 bg-card border-l border-border/60">
+                <div className="pt-6 h-full">
+                  <NotificationsContent 
+                    notifications={notifications} 
+                    unreadCount={unreadCount} 
+                    markRead={markRead} 
+                    markAllRead={markAllRead} 
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {/* Mobile Menu Button & Drawer */}
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <button
+                aria-label="Abrir menu"
+                className="rounded-full border border-border p-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[85vw] max-w-sm overflow-y-auto p-0">
+              <div className="flex h-full flex-col">
+                <div className="border-b border-border/60 px-6 py-5">
+                  <Logo />
+                </div>
+                <nav className="flex flex-1 flex-col gap-1 px-4 py-4">
+                  {nav.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                      activeProps={{ className: "text-primary bg-accent" }}
+                      activeOptions={{ exact: item.to === "/" }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                  {user && (
+                    <Link
+                      to={dashboardLink}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      {dashboardLabel}
+                    </Link>
+                  )}
+                  {user && role === "company" && (
+                    <Link
+                      to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
+                      params={companyUsername ? { username: companyUsername } : undefined}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      Meu Perfil
+                    </Link>
+                  )}
+                  {user && (
+                    <Link
+                      to="/minha-assinatura"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      Minha Assinatura
+                    </Link>
+                  )}
+                </nav>
+                <div className="border-t border-border/60 p-4">
+                  {user ? (
+                    <Button onClick={handleSignOut} variant="outline" className="w-full rounded-full">
+                      <LogOut className="mr-2 h-4 w-4" /> Sair
                     </Button>
-                    <Button asChild className="rounded-full bg-primary text-primary-foreground" onClick={() => setOpen(false)}>
-                      <Link to="/planos">Cadastrar</Link>
-                    </Button>
-                  </div>
-                )}
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button asChild variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
+                        <Link to="/login">Entrar</Link>
+                      </Button>
+                      <Button asChild className="rounded-full bg-primary text-primary-foreground" onClick={() => setOpen(false)}>
+                        <Link to="/planos">Cadastrar</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

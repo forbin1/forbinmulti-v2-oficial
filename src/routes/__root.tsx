@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ExpiredBanner } from "@/components/SubscriptionGuard";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 function NotFoundComponent() {
   return (
@@ -102,13 +103,14 @@ function RootComponent() {
 
   return (
     <AuthProvider>
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className={`flex min-h-screen flex-col bg-background text-foreground ${!hideChrome ? "pb-16 lg:pb-0" : ""}`}>
         {!hideChrome && <SiteHeader />}
         <ExpiredBanner />
         <main className="flex-1">
           <Outlet />
         </main>
         {!hideChrome && <SiteFooter />}
+        {!hideChrome && <MobileBottomNav />}
         <Toaster theme="dark" richColors position="top-center" />
       </div>
     </AuthProvider>
