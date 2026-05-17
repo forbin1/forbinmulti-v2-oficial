@@ -126,8 +126,9 @@ function PerfilProfissional() {
   const userPosts = allPosts.filter(p => p.user_id === user?.id);
 
   return (
-    <div>
-      <div className="group relative h-64 overflow-hidden border-b border-border/60 sm:h-80 lg:h-96">
+    <div className="pb-16 sm:pb-0">
+      {/* Banner / Capa */}
+      <div className="group relative h-44 overflow-hidden border-b border-border/60 sm:h-64 lg:h-80">
         {profile.cover_url ? (
           <img src={profile.cover_url} alt="" className="h-full w-full object-cover" />
         ) : (
@@ -145,64 +146,76 @@ function PerfilProfissional() {
         <input ref={coverInputRef} type="file" hidden accept="image/*" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "cover")} />
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="-mt-32 relative z-10 rounded-3xl border border-white/10 bg-card/70 p-6 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:p-10">
-          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:text-left text-center">
-            <div className="group relative -mt-10 sm:mt-0">
-              <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-full border-8 border-card bg-gradient-gold font-display text-6xl font-extrabold text-primary-foreground shadow-2xl">
+      {/* Conteúdo principal */}
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+
+        {/* Card de perfil */}
+        <div className="-mt-16 sm:-mt-20 relative z-10 rounded-2xl border border-white/10 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl sm:rounded-3xl sm:p-8">
+          {/* Avatar + info + ações */}
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-end sm:gap-6 sm:text-left">
+            {/* Avatar */}
+            <div className="group relative shrink-0">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-xl sm:h-32 sm:w-32 sm:border-8 sm:text-5xl">
                 {profile.avatar_url ? (
                   <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : initials}
               </div>
-              <button 
+              <button
                 className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition group-hover:opacity-100"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!!uploading}
               >
-                {uploading === "avatar" ? <Loader2 className="h-8 w-8 animate-spin text-white" /> : <Camera className="h-10 w-10 text-white" />}
+                {uploading === "avatar" ? <Loader2 className="h-6 w-6 animate-spin text-white" /> : <Camera className="h-8 w-8 text-white" />}
               </button>
               <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "avatar")} />
             </div>
 
-            <div className="flex-1 pb-2">
-              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-4">
-                <h1 className="font-display text-4xl font-black tracking-tight sm:text-5xl">{profile.full_name}</h1>
+            {/* Nome e meta */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl">{profile.full_name}</h1>
                 {profile.is_verified && (
-                  <Badge className="rounded-full border-success/40 bg-success/20 text-success px-4 py-1.5 font-bold animate-pulse">
-                    <ShieldCheck className="mr-1.5 h-4 w-4" /> Verificado FORBIN
+                  <Badge className="rounded-full border-success/40 bg-success/20 text-success px-3 py-1 text-xs font-bold">
+                    <ShieldCheck className="mr-1 h-3 w-3" /> Verificado
                   </Badge>
                 )}
               </div>
-              <p className="mt-2 text-xl font-medium text-muted-foreground/80">
-                {profile.role || "Profissional de Segurança"} {profile.experience_years ? `· ${profile.experience_years} anos de experiência` : ""}
+              <p className="mt-1 text-sm font-medium text-muted-foreground/80 sm:text-base">
+                {profile.role || "Profissional de Segurança"}{profile.experience_years ? ` · ${profile.experience_years} anos de exp.` : ""}
               </p>
-              <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-2 text-sm font-medium text-muted-foreground/70">
-                {profile.city && <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> {profile.city}, {profile.state}</span>}
-                <span className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {user?.email}</span>
-                {profile.phone && <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> {profile.phone}</span>}
+              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground/70 sm:justify-start sm:text-sm">
+                {profile.city && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-primary" /> {profile.city}, {profile.state}</span>}
+                <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-primary" /> {user?.email}</span>
+                {profile.phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-primary" /> {profile.phone}</span>}
               </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button onClick={() => setIsEditing(true)} variant="outline" className="h-12 rounded-full border-primary/40 bg-primary/5 px-8 font-bold hover:bg-primary/10 transition-all">
-                <Pencil className="mr-2 h-5 w-5" /> Editar Perfil
+
+            {/* Ações */}
+            <div className="flex flex-wrap justify-center gap-2 sm:shrink-0">
+              <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="rounded-full border-primary/40 bg-primary/5 px-5 font-bold hover:bg-primary/10 sm:h-10 sm:px-6">
+                <Pencil className="mr-1.5 h-4 w-4" /> Editar Perfil
               </Button>
               {profile.whatsapp && (
-                <Button asChild className="h-12 rounded-full bg-[#25D366] px-8 font-bold text-white shadow-lg shadow-[#25D366]/20 hover:bg-[#1ebe5a] hover:scale-105 transition-all">
+                <Button asChild size="sm" className="rounded-full bg-[#25D366] px-5 font-bold text-white shadow-lg shadow-[#25D366]/20 hover:bg-[#1ebe5a] sm:h-10 sm:px-6">
                   <a href={`https://wa.me/55${profile.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                    <WhatsAppIcon className="mr-2 h-5 w-5" /> WhatsApp
+                    <WhatsAppIcon className="mr-1.5 h-4 w-4" /> WhatsApp
                   </a>
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            {profile.linkedin_url && <SocialChip icon={Linkedin} label="LinkedIn" />}
-            {profile.instagram_url && <SocialChip icon={Instagram} label="Instagram" />}
-            {profile.website_url && <SocialChip icon={Globe} label="Site" />}
-          </div>
+          {/* Redes sociais */}
+          {(profile.linkedin_url || profile.instagram_url || profile.website_url) && (
+            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+              {profile.linkedin_url && <SocialChip icon={Linkedin} label="LinkedIn" />}
+              {profile.instagram_url && <SocialChip icon={Instagram} label="Instagram" />}
+              {profile.website_url && <SocialChip icon={Globe} label="Site" />}
+            </div>
+          )}
 
-          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border/60 pt-6 sm:grid-cols-4 text-center sm:text-left">
+          {/* Stats */}
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-5 text-center sm:grid-cols-4">
             <Stat label="Cursos" value="—" />
             <Stat label="Experiência" value={profile.experience_years ? `${profile.experience_years}a` : "—"} />
             <Stat label="Postos" value="—" />
@@ -210,15 +223,17 @@ function PerfilProfissional() {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-6">
+        {/* Grid de conteúdo */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px]">
+          {/* Coluna principal */}
+          <div className="min-w-0 space-y-6">
             <Tabs defaultValue="sobre">
-              <TabsList className="flex h-auto w-full gap-2 rounded-2xl bg-card/50 p-1.5 backdrop-blur-md">
-                <TabsTrigger value="sobre" className="flex-1 rounded-xl py-3 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Sobre</TabsTrigger>
-                <TabsTrigger value="experiencia" className="flex-1 rounded-xl py-3 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Experiências</TabsTrigger>
+              <TabsList className="flex h-auto w-full gap-1.5 rounded-2xl bg-card/50 p-1.5 backdrop-blur-md">
+                <TabsTrigger value="sobre" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Sobre</TabsTrigger>
+                <TabsTrigger value="experiencia" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Experiências</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="sobre" className="mt-6 space-y-6">
+              <TabsContent value="sobre" className="mt-5 space-y-5">
                 <Card title="Resumo profissional">
                   <p className="leading-relaxed text-muted-foreground whitespace-pre-wrap">
                     {profile.bio || "Nenhum resumo cadastrado."}
@@ -226,10 +241,10 @@ function PerfilProfissional() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="experiencia" className="mt-8 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              <TabsContent value="experiencia" className="mt-5 space-y-5 animate-in fade-in slide-in-from-bottom-4">
                 <ComposeBox />
                 {userPosts.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-border/60 p-12 text-center text-muted-foreground bg-card/20">
+                  <div className="rounded-2xl border border-dashed border-border/60 p-10 text-center text-sm text-muted-foreground bg-card/20">
                     Nenhuma experiência compartilhada ainda.
                   </div>
                 ) : (
@@ -241,13 +256,14 @@ function PerfilProfissional() {
             </Tabs>
           </div>
 
-          <aside className="space-y-8">
+          {/* Sidebar */}
+          <aside className="space-y-5">
             <Card title="Disponibilidade">
-              <div className="space-y-4 text-sm font-medium">
-                <Row label="Função Atual" value={profile.role || "Não informada"} />
+              <div className="space-y-3 text-sm font-medium">
+                <Row label="Função" value={profile.role || "Não informada"} />
                 <Row label="Região" value={profile.city ? `${profile.city}, ${profile.state}` : "Não informada"} />
                 <Row label="Status" value="Disponível para propostas" />
-                <div className="mt-6 pt-6 border-t border-white/5">
+                <div className="mt-4 pt-4 border-t border-white/5">
                    <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary font-bold hover:bg-primary/10" onClick={() => setIsEditing(true)}>
                      <Pencil className="mr-2 h-3 w-3" /> Editar Disponibilidade
                    </Button>
@@ -255,9 +271,9 @@ function PerfilProfissional() {
               </div>
             </Card>
 
-            <div className="rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 p-8 border border-primary/20">
-              <ShieldCheck className="h-10 w-10 text-primary mb-4" />
-              <h3 className="font-display text-xl font-bold mb-2">Selo de Qualidade</h3>
+            <div className="rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 p-6 border border-primary/20 sm:rounded-3xl sm:p-8">
+              <ShieldCheck className="h-8 w-8 text-primary mb-3" />
+              <h3 className="font-display text-lg font-bold mb-1.5">Selo de Qualidade</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Este profissional possui certificações validadas pela plataforma FORBIN MultiEmpresas.
               </p>
@@ -368,17 +384,17 @@ function SocialChip({ icon: Icon, label }: { icon: any; label: string }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col items-center sm:items-start">
-      <p className="font-display text-3xl font-black text-primary tracking-tighter">{value}</p>
-      <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-1">{label}</p>
+    <div className="flex flex-col items-center">
+      <p className="font-display text-2xl font-black text-primary tracking-tighter sm:text-3xl">{value}</p>
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1">{label}</p>
     </div>
   );
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-white/5 bg-card/40 p-8 backdrop-blur-sm">
-      <h3 className="mb-6 font-display text-xl font-bold tracking-tight">{title}</h3>
+    <div className="rounded-2xl border border-white/5 bg-card/40 p-5 backdrop-blur-sm sm:rounded-3xl sm:p-7">
+      <h3 className="mb-4 font-display text-lg font-bold tracking-tight sm:mb-5 sm:text-xl">{title}</h3>
       {children}
     </div>
   );
