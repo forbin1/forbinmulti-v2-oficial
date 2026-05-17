@@ -34,6 +34,7 @@ function EmpresaDashboard() {
   const [salaryMax, setSalaryMax] = useState("");
   const [requirements, setRequirements] = useState("");
   const [benefits, setBenefits] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
 
   const loadData = async () => {
     if (!user) return;
@@ -97,6 +98,7 @@ function EmpresaDashboard() {
         requirements,
         benefits,
         is_published: true,
+        banner_url: bannerUrl || null,
       });
 
       if (error) throw error;
@@ -115,6 +117,7 @@ function EmpresaDashboard() {
       setSalaryMax("");
       setRequirements("");
       setBenefits("");
+      setBannerUrl("");
 
       loadData();
     } catch (err: any) {
@@ -240,6 +243,43 @@ function EmpresaDashboard() {
               <div className="sm:col-span-2 space-y-2">
                 <Label>Benefícios</Label>
                 <Textarea value={benefits} onChange={(e) => setBenefits(e.target.value)} rows={2} placeholder="Ex: Vale refeição, vale transporte, plano de saúde..." className="bg-surface" />
+              </div>
+              <div className="sm:col-span-2 space-y-2">
+                <Label>Imagem / Banner da Vaga (URL)</Label>
+                <div className="flex gap-2">
+                  <Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="Link de uma imagem (ex: Unsplash) ou selecione um arquivo..." className="bg-surface flex-1" />
+                  <Button type="button" variant="outline" onClick={() => {
+                    const randoms = [
+                      "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600",
+                      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=600",
+                      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=600",
+                      "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=600"
+                    ];
+                    setBannerUrl(randoms[Math.floor(Math.random() * randoms.length)]);
+                  }} className="shrink-0 rounded-xl">Sugestão</Button>
+                </div>
+                <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 p-4 bg-surface/50">
+                  <Input type="file" accept="image/*" className="hidden" id="job-banner-upload" onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      const file = e.target.files[0];
+                      const localUrl = URL.createObjectURL(file);
+                      setBannerUrl(localUrl);
+                      toast.success("Foto selecionada! O link temporário foi gerado.");
+                    }
+                  }} />
+                  <Label htmlFor="job-banner-upload" className="flex h-20 w-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
+                    Selecionar Foto
+                  </Label>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold">Selecione uma imagem de destaque</p>
+                    <p className="text-[10px] text-muted-foreground">Formatos suportados: PNG, JPG ou GIF. Máximo 5MB.</p>
+                  </div>
+                  {bannerUrl && (
+                    <div className="h-16 w-24 overflow-hidden rounded-lg border">
+                      <img src={bannerUrl} alt="Preview" className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <DialogFooter className="mt-6">

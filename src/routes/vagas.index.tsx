@@ -63,7 +63,7 @@ function VagasPage() {
             posted: "Recém criada",
             applicants: 0,
             requirements: j.requirements ? j.requirements.split(",") : [],
-            cover: "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
+            cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
           }));
           setRealJobs(mapped);
         }

@@ -53,7 +53,7 @@ export const Route = createFileRoute("/vagas/$jobId")({
           description: data.description || "",
           requirements: data.requirements ? data.requirements.split(",") : [],
           benefits: data.benefits ? data.benefits.split(",") : [],
-          cover: "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
+          cover: data.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
           companyUserId: data.companies?.user_id
         } as any;
       }
