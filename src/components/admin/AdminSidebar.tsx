@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Shield,
   Menu,
+  Store,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const ITEMS: Item[] = [
   { to: "/admin/cursos", label: "Cursos", icon: GraduationCap },
   { to: "/admin/vagas", label: "Vagas", icon: Briefcase },
   { to: "/admin/profissionais", label: "Profissionais", icon: Users },
+  { to: "/admin/afiliados", label: "Afiliações", icon: Store },
   { to: "/admin/experiencias", label: "Experiências", icon: Sparkles },
   { to: "/admin/landing", label: "Landing Page", icon: LayoutTemplate },
   { to: "/admin/planos", label: "Planos", icon: CreditCard },

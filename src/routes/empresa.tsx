@@ -21,11 +21,19 @@ import {
   Linkedin,
   Instagram,
   Share2,
+  Camera,
+  ShoppingCart,
+  Link as LinkIcon,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JOBS } from "@/data/mock";
+import { useAuth } from "@/hooks/use-auth";
+import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/empresa")({
   head: () => ({
@@ -46,6 +54,39 @@ const CANDIDATES = [
 ];
 
 function PainelEmpresa() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  
+  // States for Affiliate System Mock
+  const [affiliations, setAffiliations] = useState<Record<string, 'none' | 'pending' | 'approved'>>({
+    "c1": "none", "c2": "approved", "c3": "pending"
+  });
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+        if (data) setProfile(data);
+      });
+    }
+  }, [user]);
+
+  const coverInput = useRef<HTMLInputElement>(null);
+  const avatarInput = useRef<HTMLInputElement>(null);
+
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>, kind: "cover" | "avatar") => {
+    // Simulated upload for now, ideally uploads to storage and updates profile
+    toast.success(kind === "cover" ? "Capa atualizada!" : "Foto atualizada!");
+  };
+
+  const requestAffiliation = (id: string) => {
+    setAffiliations(prev => ({ ...prev, [id]: 'pending' }));
+    toast.success("Solicitação enviada para o Admin Master!");
+  };
+
+  const name = profile?.full_name || profile?.company_name || user?.user_metadata?.company_name || "Sua Empresa";
+  const avatar = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const handle = profile?.handle || "empresa";
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {/* Capa */}
@@ -57,13 +98,19 @@ function PainelEmpresa() {
       {/* Header card da empresa */}
       <div className="relative rounded-3xl border border-border/60 bg-card/85 p-6 shadow-elevated backdrop-blur-xl sm:p-8">
         <div className="flex flex-wrap items-start gap-6">
-          <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-gold sm:h-32 sm:w-32">
-            VT
+          <div className="relative">
+            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-gold sm:h-32 sm:w-32">
+              {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+            </div>
+            <button onClick={() => avatarInput.current?.click()} className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow hover:bg-primary/90">
+              <Camera className="h-4 w-4" />
+            </button>
+            <input ref={avatarInput} type="file" accept="image/*" hidden onChange={(e) => onPick(e, "avatar")} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Empresa de segurança</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Empresa</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Vigilância Total LTDA</h1>
+              <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{name}</h1>
               <Badge className="rounded-full border-success/40 bg-success/15 text-success">
                 <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Verificada FORBIN
               </Badge>
@@ -125,6 +172,9 @@ function PainelEmpresa() {
               </TabsTrigger>
               <TabsTrigger value="sobre" className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 Sobre
+              </TabsTrigger>
+              <TabsTrigger value="afiliados" className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Marketplace (Afiliados)
               </TabsTrigger>
             </TabsList>
 
@@ -274,6 +324,73 @@ function PainelEmpresa() {
                   <a className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-surface px-4 py-2 text-sm hover:border-primary" href="#">
                     <Globe className="h-4 w-4 text-primary" /> vigilanciatotal.com.br
                   </a>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="afiliados" className="mt-6 space-y-6">
+              <div className="rounded-2xl border border-border/60 bg-card p-6">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-6">
+                  <div>
+                    <h2 className="font-display text-2xl font-bold">Marketplace de Cursos</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Venda cursos da plataforma para seus candidatos e ganhe comissões automáticas (Estilo Hotmart).
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2">
+                    <ShoppingCart className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Suas Vendas</p>
+                      <p className="font-bold text-primary">R$ 1.450,00</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {[
+                    { id: "c1", title: "Formação de Vigilante 2025", price: "R$ 800,00", com: "20%", val: "R$ 160,00" },
+                    { id: "c2", title: "Reciclagem de Vigilantes", price: "R$ 350,00", com: "15%", val: "R$ 52,50" },
+                    { id: "c3", title: "Operador de CFTV", price: "R$ 450,00", com: "25%", val: "R$ 112,50" },
+                  ].map((c) => {
+                    const status = affiliations[c.id];
+                    return (
+                      <div key={c.id} className="relative overflow-hidden rounded-2xl border border-border/60 bg-surface flex flex-col">
+                        <div className="h-32 bg-primary/20 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop)' }}></div>
+                        <div className="flex flex-1 flex-col p-5">
+                          <h3 className="font-bold text-lg">{c.title}</h3>
+                          <div className="mt-3 flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Preço: <span className="font-semibold text-foreground">{c.price}</span></span>
+                            <Badge className="bg-success/20 text-success border-success/30">Comissão {c.com}</Badge>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground border-b border-border/40 pb-4">
+                            Você ganha <strong className="text-primary">{c.val}</strong> por venda.
+                          </p>
+                          
+                          <div className="mt-auto pt-4">
+                            {status === 'approved' ? (
+                              <div className="space-y-2">
+                                <Badge className="bg-primary/20 text-primary w-full justify-center py-1">Afiliado Aprovado</Badge>
+                                <Button variant="outline" className="w-full text-xs" onClick={() => {
+                                  navigator.clipboard.writeText(`https://forbin.com/c/${c.id}?ref=${user?.id}`);
+                                  toast.success("Link copiado!");
+                                }}>
+                                  <LinkIcon className="mr-2 h-3 w-3" /> Copiar Link de Venda
+                                </Button>
+                              </div>
+                            ) : status === 'pending' ? (
+                              <Button disabled variant="outline" className="w-full">
+                                <Clock className="mr-2 h-4 w-4" /> Em análise pelo Admin
+                              </Button>
+                            ) : (
+                              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => requestAffiliation(c.id)}>
+                                Solicitar Afiliação
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </TabsContent>
