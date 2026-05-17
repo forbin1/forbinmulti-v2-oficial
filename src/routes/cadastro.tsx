@@ -93,13 +93,15 @@ function CadastroProfissional() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mb-8 text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Cadastro de profissional</p>
-        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
-          Monte seu currículo
-        </h1>
-        <p className="mt-2 text-lg text-muted-foreground">Etapa {step} de {STEPS.length}</p>
-      </div>
+      {step > 0 && (
+        <div className="mb-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Cadastro de profissional</p>
+          <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            Monte seu currículo
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">Etapa {step} de {STEPS.length}</p>
+        </div>
+      )}
 
       {/* Stepper */}
       {step > 0 && (
