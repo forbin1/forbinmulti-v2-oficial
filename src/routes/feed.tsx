@@ -5,9 +5,10 @@ import { JOBS } from "@/data/mock";
 import { usePosts } from "@/hooks/use-posts";
 import { ComposeBox, PostCard } from "./profissional";
 import { ADS, AdBanner } from "@/components/AdBanner";
-import { Fragment } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
@@ -29,6 +30,44 @@ function FeedContent() {
   const userRole = user?.user_metadata?.role || "Profissional";
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   const avatarUrl = user?.user_metadata?.avatar_url;
+
+  const [trendingJobs, setTrendingJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("id, title, city, state, salary_min, salary_max, banner_url, companies(company_name)")
+          .eq("is_published", true)
+          .order("created_at", { ascending: false })
+          .limit(4);
+        
+        if (data && data.length > 0) {
+          setTrendingJobs(data);
+        } else {
+          // Fallback to mock JOBS
+          setTrendingJobs(JOBS.slice(0, 4).map((j, i) => ({
+            id: j.id,
+            title: j.title,
+            city: j.location.split(",")[0],
+            state: j.location.split(",")[1]?.trim() || "",
+            salary_min: parseFloat(j.salary.replace(/[^0-9]/g, "")) || null,
+            banner_url: [
+              "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&h=400&fit=crop",
+              "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=400&fit=crop",
+              "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&h=400&fit=crop",
+              "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&h=400&fit=crop"
+            ][i],
+            companies: { company_name: j.company }
+          })));
+        }
+      } catch (err) {
+        console.error("Error fetching trending jobs:", err);
+      }
+    };
+    fetchTrending();
+  }, []);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10 sm:px-6 lg:px-8">
@@ -79,15 +118,35 @@ function FeedContent() {
               <h3 className="text-xs font-semibold uppercase tracking-widest text-primary">Vagas em alta</h3>
             </div>
             <ul className="space-y-3">
-              {JOBS.slice(0, 4).map((j) => (
+              {trendingJobs.map((j) => (
                 <li key={j.id}>
                   <Link
                     to="/vagas/$jobId"
                     params={{ jobId: j.id }}
-                    className="block rounded-xl border border-border/60 bg-surface p-3 transition hover:border-primary/40"
+                    className="group block overflow-hidden rounded-xl border border-border/60 bg-surface transition hover:border-primary/50 hover:scale-[1.01] hover:shadow-lg"
                   >
-                    <p className="text-sm font-semibold">{j.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{j.location} · {j.salary}</p>
+                    <div className="relative h-20 w-full overflow-hidden">
+                      {j.banner_url ? (
+                        <img
+                          src={j.banner_url}
+                          alt={j.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-gold flex items-center justify-center text-xs text-primary-foreground font-bold tracking-widest uppercase">
+                          FORBIN
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-xs font-bold leading-tight group-hover:text-primary transition line-clamp-1">{j.title}</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{j.companies?.company_name || "Empresa"}</p>
+                      <p className="mt-1 text-[10px] text-primary/95 font-medium">
+                        {j.city}{j.state ? `, ${j.state}` : ""}
+                        {j.salary_min ? ` · R$ ${j.salary_min.toLocaleString('pt-BR')}` : ""}
+                      </p>
+                    </div>
                   </Link>
                 </li>
               ))}
