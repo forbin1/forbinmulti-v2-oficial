@@ -4,6 +4,7 @@ import { Check, Zap, Rocket, User, Loader2, ShieldCheck, Star, Building2, ArrowR
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { CheckoutModal } from "@/components/CheckoutModal";
 
 export const Route = createFileRoute("/planos")({
   head: () => ({
@@ -115,6 +116,15 @@ function PlanosPage() {
   const professionals = plans.filter((p) => p.audience === "professional");
   const companies = plans.filter((p) => p.audience === "company");
 
+  // Checkout state
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<{ name: string; installmentLabel: string; pixLabel: string; period: string; } | null>(null);
+
+  const openCheckout = (plan: typeof checkoutPlan) => {
+    setCheckoutPlan(plan);
+    setCheckoutOpen(true);
+  };
+
   return (
     <div>
       {/* Hero */}
@@ -158,17 +168,32 @@ function PlanosPage() {
                 <div className="grid gap-6 lg:grid-cols-3">
                   {/* Monthly */}
                   {professionals.filter(p => p.period === "month").map(p => (
-                    <MonthlyCard key={p.id} plan={p} ctaTo="/cadastro" />
+                    <MonthlyCard
+                      key={p.id}
+                      plan={p}
+                      onCheckout={() => openCheckout({
+                        name: p.name,
+                        installmentLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})}/mês`,
+                        pixLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} à vista`,
+                        period: "Mensal",
+                      })}
+                    />
                   ))}
-                  {/* Annual — uses monthly price as installment display */}
+                  {/* Annual */}
                   {professionals.filter(p => p.period === "year").map(p => {
                     const monthly = professionals.find(m => m.period === "month");
+                    const inst = monthly?.price_cents ?? p.price_cents / 12;
                     return (
                       <AnnualProfCard
                         key={p.id}
                         plan={p}
-                        ctaTo="/cadastro"
-                        installmentCents={monthly?.price_cents ?? p.price_cents / 12}
+                        installmentCents={inst}
+                        onCheckout={() => openCheckout({
+                          name: p.name,
+                          installmentLabel: `R$ ${(inst/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} 12x`,
+                          pixLabel: "R$ 247,90 à vista",
+                          period: "Anual",
+                        })}
                       />
                     );
                   })}
@@ -207,16 +232,30 @@ function PlanosPage() {
 
                 <div className="grid gap-6 lg:grid-cols-2">
                   {companies.filter(p => p.period === "month").map(p => (
-                    <MonthlyCard key={p.id} plan={p} ctaTo="/cadastro-empresa" />
+                    <MonthlyCard
+                      key={p.id}
+                      plan={p}
+                      onCheckout={() => openCheckout({
+                        name: p.name,
+                        installmentLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})}/mês`,
+                        pixLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} à vista`,
+                        period: "Mensal",
+                      })}
+                    />
                   ))}
                   {companies.filter(p => p.period === "year").map(p => {
-                    const monthly = companies.find(m => m.period === "month");
+                    const inst = p.price_cents / 12;
                     return (
                       <AnnualEmpresaCard
                         key={p.id}
                         plan={p}
-                        ctaTo="/cadastro-empresa"
-                        installmentCents={p.price_cents / 12}
+                        installmentCents={inst}
+                        onCheckout={() => openCheckout({
+                          name: p.name,
+                          installmentLabel: `R$ ${(inst/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} 12x`,
+                          pixLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} à vista`,
+                          period: "Anual",
+                        })}
                       />
                     );
                   })}
@@ -241,12 +280,21 @@ function PlanosPage() {
           </Button>
         </div>
       </div>
+
+      {/* Checkout Modal */}
+      {checkoutPlan && (
+        <CheckoutModal
+          open={checkoutOpen}
+          onOpenChange={setCheckoutOpen}
+          plan={checkoutPlan}
+        />
+      )}
     </div>
   );
 }
 
 /* ── Monthly card (simple) ── */
-function MonthlyCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
+function MonthlyCard({ plan, onCheckout }: { plan: Plan; onCheckout: () => void }) {
   const monthly = plan.price_cents / 100;
   return (
     <div className="relative flex flex-col rounded-3xl border border-border/60 bg-card p-8">
@@ -267,15 +315,15 @@ function MonthlyCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
           </li>
         ))}
       </ul>
-      <Button asChild className="mt-8 h-12 w-full rounded-full bg-foreground font-semibold text-background hover:bg-foreground/90">
-        <Link to={ctaTo}>{plan.cta_label || "Assinar"}</Link>
+      <Button onClick={onCheckout} className="mt-8 h-12 w-full rounded-full bg-foreground font-semibold text-background hover:bg-foreground/90">
+        {plan.cta_label || "Assinar"}
       </Button>
     </div>
   );
 }
 
 /* ── Annual Professional card (highlighted) ── */
-function AnnualProfCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: string; installmentCents: number }) {
+function AnnualProfCard({ plan, installmentCents, onCheckout }: { plan: Plan; installmentCents: number; onCheckout: () => void }) {
   const installment = installmentCents / 100;
   const totalBRL = plan.price_cents / 100;
   return (
@@ -312,8 +360,8 @@ function AnnualProfCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: 
         ))}
       </ul>
 
-      <Button asChild className="mt-8 h-14 w-full rounded-full bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90">
-        <Link to={ctaTo}>{plan.cta_label || "Assinar Anual"}</Link>
+      <Button onClick={onCheckout} className="mt-8 h-14 w-full rounded-full bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90">
+        {plan.cta_label || "Assinar Anual"}
       </Button>
       <p className="mt-3 text-center text-xs text-muted-foreground">Sem fidelidade. Cancele quando quiser.</p>
     </div>
@@ -321,7 +369,7 @@ function AnnualProfCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: 
 }
 
 /* ── Annual Empresa card (highlighted) ── */
-function AnnualEmpresaCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: string; installmentCents: number }) {
+function AnnualEmpresaCard({ plan, installmentCents, onCheckout }: { plan: Plan; installmentCents: number; onCheckout: () => void }) {
   const installment = installmentCents / 100;
   const totalBRL = plan.price_cents / 100;
   return (
@@ -358,8 +406,8 @@ function AnnualEmpresaCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaT
         ))}
       </ul>
 
-      <Button asChild className="mt-8 h-14 w-full rounded-full bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90">
-        <Link to={ctaTo}>{plan.cta_label || "Assinar Anual"}</Link>
+      <Button onClick={onCheckout} className="mt-8 h-14 w-full rounded-full bg-primary text-base font-bold text-primary-foreground shadow-gold hover:bg-primary/90">
+        {plan.cta_label || "Assinar Anual"}
       </Button>
       <p className="mt-3 text-center text-xs text-muted-foreground">Contrato anual. Suporte dedicado incluso.</p>
     </div>
