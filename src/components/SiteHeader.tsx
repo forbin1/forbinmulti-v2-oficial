@@ -214,7 +214,7 @@ export function SiteHeader() {
                     <DropdownMenuItem asChild>
                       <Link to="/perfil-empresa" className="cursor-pointer">
                         <Building2 className="mr-2 h-4 w-4" />
-                        Meu Perfil Empresa
+                        Meu Perfil
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -280,7 +280,7 @@ export function SiteHeader() {
                     onClick={() => setOpen(false)}
                     className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
-                    Meu Perfil Empresa
+                    Meu Perfil
                   </Link>
                 )}
               </nav>
