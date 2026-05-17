@@ -338,7 +338,13 @@ function EmpresaPublicProfile() {
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{j.description}</p>
                       <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-4 text-xs text-muted-foreground mt-4">
                         <span>📍 {j.city}, {j.state}</span>
-                        <span className="font-semibold text-primary">{j.salary_min ? `R$ ${j.salary_min.toLocaleString("pt-BR")}` : "A combinar"}</span>
+                        <span className="font-semibold text-primary">{(() => {
+                          const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+                          if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
+                          if (j.salary_min) return fmt(j.salary_min);
+                          if (j.salary_max) return fmt(j.salary_max);
+                          return "A combinar";
+                        })()}</span>
                       </div>
                     </div>
                   </Link>

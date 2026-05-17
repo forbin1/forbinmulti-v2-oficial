@@ -62,7 +62,13 @@ function VagasPage() {
             location: `${j.city || "Brasil"}, ${j.state || ""}`,
             type: j.contract_type || "CLT",
             shift: j.modality || "Presencial",
-            salary: j.salary_min ? `R$ ${j.salary_min.toLocaleString("pt-BR")}` : "A combinar",
+            salary: (() => {
+              const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+              if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
+              if (j.salary_min) return fmt(j.salary_min);
+              if (j.salary_max) return fmt(j.salary_max);
+              return "A combinar";
+            })(),
             posted: "Recém criada",
             applicants: 0,
             requirements: j.requirements ? j.requirements.split(",") : [],

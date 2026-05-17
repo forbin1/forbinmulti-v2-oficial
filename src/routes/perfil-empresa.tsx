@@ -346,7 +346,13 @@ function PerfilEmpresa() {
                     <span>⏱ {j.modality}</span>
                   </div>
                   <p className="mt-2 text-sm font-semibold text-primary">
-                    {j.salary_min ? `R$ ${j.salary_min.toLocaleString("pt-BR")}` : "A combinar"}
+                    {(() => {
+                      const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+                      if (j.salary_min && j.salary_max) return `${fmt(j.salary_min)} – ${fmt(j.salary_max)}`;
+                      if (j.salary_min) return fmt(j.salary_min);
+                      if (j.salary_max) return fmt(j.salary_max);
+                      return "A combinar";
+                    })()}
                   </p>
                   <Button asChild size="sm" variant="outline" className="w-full mt-4 rounded-full">
                     <Link to="/vagas/$jobId" params={{ jobId: j.id }}>Ver detalhes</Link>

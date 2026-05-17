@@ -47,7 +47,13 @@ export const Route = createFileRoute("/vagas/$jobId")({
           location: `${data.city || "Brasil"}, ${data.state || ""}`,
           type: data.contract_type || "CLT",
           shift: data.modality || "Presencial",
-          salary: data.salary_min ? `R$ ${data.salary_min.toLocaleString("pt-BR")}` : "A combinar",
+          salary: (() => {
+            const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+            if (data.salary_min && data.salary_max) return `${fmt(data.salary_min)} – ${fmt(data.salary_max)}`;
+            if (data.salary_min) return fmt(data.salary_min);
+            if (data.salary_max) return fmt(data.salary_max);
+            return "A combinar";
+          })(),
           posted: "Recém criada",
           applicants: 0,
           description: data.description || "",
