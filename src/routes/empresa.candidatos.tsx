@@ -1,12 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, Eye, Calendar, Loader2, CheckCircle2, XCircle, Phone } from "lucide-react";
+import { Search, Eye, Calendar, Loader2, CheckCircle2, XCircle, Phone, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/empresa/candidatos")({
   component: EmpresaCandidatos,
@@ -17,6 +25,10 @@ function EmpresaCandidatos() {
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  
+  // Feedback / Message States
+  const [selectedAppFeedback, setSelectedAppFeedback] = useState<any | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
 
   const loadApplications = async () => {
     if (!user) return;
@@ -96,6 +108,28 @@ function EmpresaCandidatos() {
     }
   };
 
+  const openFeedbackDialog = (app: any) => {
+    setSelectedAppFeedback(app);
+    setFeedbackText(app.feedback || "");
+  };
+
+  const handleSaveFeedback = async () => {
+    if (!selectedAppFeedback) return;
+    try {
+      const { error } = await supabase
+        .from("applications")
+        .update({ feedback: feedbackText })
+        .eq("id", selectedAppFeedback.id);
+
+      if (error) throw error;
+      toast.success("Mensagem enviada ao candidato!");
+      setSelectedAppFeedback(null);
+      loadApplications();
+    } catch (err: any) {
+      toast.error("Erro ao enviar mensagem: " + err.message);
+    }
+  };
+
   const filteredApps = applications.filter(a => 
     a.prof_name.toLowerCase().includes(search.toLowerCase()) ||
     a.job_title.toLowerCase().includes(search.toLowerCase())
@@ -153,7 +187,7 @@ function EmpresaCandidatos() {
                     Exp: {c.prof_exp} anos · Contato: {c.prof_phone}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className={`rounded-full px-3 py-1 ${
                     c.status === "novo" ? "bg-primary/20 text-primary border-primary/30" :
                     c.status === "analise" ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" :
@@ -164,7 +198,15 @@ function EmpresaCandidatos() {
                     {c.status.toUpperCase()}
                   </Badge>
                   
-                  <div className="flex gap-1.5 ml-2">
+                  <div className="flex flex-wrap gap-1.5 ml-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => openFeedbackDialog(c)}
+                      className="rounded-full text-xs text-primary border-primary/30"
+                    >
+                      <MessageSquare className="mr-1 h-3.5 w-3.5" /> Mensagem
+                    </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
@@ -203,6 +245,52 @@ function EmpresaCandidatos() {
           </ul>
         </div>
       )}
+
+      {/* Write message / feedback dialog */}
+      <Dialog open={!!selectedAppFeedback} onOpenChange={(o) => !o && setSelectedAppFeedback(null)}>
+        {selectedAppFeedback && (
+          <DialogContent className="w-[95%] max-w-md rounded-3xl bg-card border-border/60">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl font-bold">Enviar Mensagem ao Candidato</DialogTitle>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground/90">{selectedAppFeedback.prof_name}</p>
+                <p className="text-xs text-primary mt-0.5">{selectedAppFeedback.job_title}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground">Mensagem / Observações</label>
+                <Textarea
+                  placeholder="Escreva uma mensagem sobre o processo seletivo, data da entrevista, feedback ou próximos passos..."
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  className="min-h-[120px] bg-surface rounded-2xl border-border/60 resize-none"
+                />
+              </div>
+
+              <DialogFooter className="flex gap-2 justify-end pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelectedAppFeedback(null)}
+                  className="rounded-xl border border-border/60"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveFeedback}
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Salvar Mensagem
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
