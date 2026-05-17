@@ -3,7 +3,7 @@ import { useAuth } from "./use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = "professional" | "company" | null;
-export type SubscriptionStatus = "active" | "expired" | "none";
+export type SubscriptionStatus = "active" | "expired" | "free" | "none";
 
 export interface SubscriptionInfo {
   status: SubscriptionStatus;
@@ -12,6 +12,8 @@ export interface SubscriptionInfo {
   expiresAt: Date | null;
   isActive: boolean;
   isExpired: boolean;
+  isFree: boolean;        // registered but no plan ever purchased
+  daysRemaining: number | null;  // null if no active plan
   loading: boolean;
   refresh: () => void;
 }
@@ -25,6 +27,8 @@ export function useSubscription(): SubscriptionInfo {
     expiresAt: null,
     isActive: false,
     isExpired: false,
+    isFree: false,
+    daysRemaining: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -44,18 +48,26 @@ export function useSubscription(): SubscriptionInfo {
       const now = new Date();
       const pastExpiry = expiresAt ? expiresAt < now : false;
       const raw = (profile.subscription_status as SubscriptionStatus) || "none";
-      const status: SubscriptionStatus =
-        raw === "active" && pastExpiry ? "expired" : raw;
-      setData({
-        status,
-        role: (profile.role as UserRole) ?? null,
-        plan: profile.subscription_plan ?? null,
-        expiresAt,
-        isActive: status === "active",
-        isExpired: status === "expired",
-      });
+      const role = (profile.role as UserRole) ?? null;
+
+      let status: SubscriptionStatus;
+      if (raw === "active" && pastExpiry) status = "expired";
+      else if (raw === "none" && role) status = "free";  // has role but no plan
+      else status = raw;
+
+      const isActive = status === "active";
+      const isExpired = status === "expired";
+      const isFree = status === "free" || status === "none";
+
+      let daysRemaining: number | null = null;
+      if (isActive && expiresAt) {
+        daysRemaining = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+
+      setData({ status, role, plan: profile.subscription_plan ?? null, expiresAt, isActive, isExpired, isFree, daysRemaining });
     } else {
-      setData({ status: "none", role: null, plan: null, expiresAt: null, isActive: false, isExpired: false });
+      // No profile yet
+      setData({ status: "none", role: null, plan: null, expiresAt: null, isActive: false, isExpired: false, isFree: false, daysRemaining: null });
     }
     setLoading(false);
   }, [user]);
@@ -65,7 +77,7 @@ export function useSubscription(): SubscriptionInfo {
   return { ...data, loading, refresh: fetch };
 }
 
-/** Call after a successful simulated/real payment to activate the subscription */
+/** Activate subscription after payment. Call this after simulated (or real) payment success. */
 export async function activateSubscription(
   userId: string,
   role: UserRole,
@@ -86,5 +98,16 @@ export async function activateSubscription(
     },
     { onConflict: "user_id" },
   );
+
+  // Create success notification
+  if (!error) {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      title: "Plano ativado com sucesso! 🎉",
+      message: `Seu plano ${planSlug.replace(/-/g, " ")} está ativo até ${expiresAt.toLocaleDateString("pt-BR")}.`,
+      type: "success",
+    }).then(() => {}); // fire-and-forget, non-critical
+  }
+
   return error;
 }

@@ -18,6 +18,7 @@ import { ADS, AdBanner } from "@/components/AdBanner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/vagas-hero.jpg";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 export const Route = createFileRoute("/vagas/")({
   head: () => ({
@@ -264,73 +265,73 @@ function VagasPage() {
           </Sheet>
         </div>
 
-        <p className="mb-6 text-sm text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? "vaga encontrada" : "vagas encontradas"}
-        </p>
+        <SubscriptionGuard feature="ver e se candidatar a vagas">
+          <p className="mb-6 text-sm text-muted-foreground">
+            {filtered.length} {filtered.length === 1 ? "vaga encontrada" : "vagas encontradas"}
+          </p>
 
-        <div className="relative">
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((job, idx) => (
-              <Fragment key={job.id}>
-                <Link
-                  to="/vagas/$jobId"
-                  params={{ jobId: job.id }}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/50 hover:shadow-gold"
-                >
-                  {/* Cover 16:9 */}
-                  <div className="relative aspect-video w-full overflow-hidden">
-                    <img
-                      src={job.cover}
-                      alt={job.title}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <Badge className="absolute right-3 top-3 rounded-full bg-black/60 text-xs text-white backdrop-blur">
-                      {job.type}
-                    </Badge>
-                    <div className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-primary text-sm font-bold text-primary-foreground shadow-lg">
-                      {job.companyLogo ? (
-                        <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover" />
-                      ) : (
-                        job.companyInitials
-                      )}
+          <div className="relative">
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((job, idx) => (
+                <Fragment key={job.id}>
+                  <Link
+                    to="/vagas/$jobId"
+                    params={{ jobId: job.id }}
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/50 hover:shadow-gold"
+                  >
+                    {/* Cover 16:9 */}
+                    <div className="relative aspect-video w-full overflow-hidden">
+                      <img
+                        src={job.cover}
+                        alt={job.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      <Badge className="absolute right-3 top-3 rounded-full bg-black/60 text-xs text-white backdrop-blur">
+                        {job.type}
+                      </Badge>
+                      <div className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-primary text-sm font-bold text-primary-foreground shadow-lg">
+                        {job.companyLogo ? (
+                          <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover" />
+                        ) : (
+                          job.companyInitials
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-1 flex-col p-5">
-                    <h3 className="text-lg font-semibold leading-tight transition group-hover:text-primary">
-                      {job.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{job.company}</p>
-                    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span>📍 {job.location}</span>
-                      <span>⏱ {job.shift}</span>
+                    <div className="flex flex-1 flex-col p-5">
+                      <h3 className="text-lg font-semibold leading-tight transition group-hover:text-primary">
+                        {job.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{job.company}</p>
+                      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span>📍 {job.location}</span>
+                        <span>⏱ {job.shift}</span>
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-primary">{job.salary}</p>
+                      <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-4 text-xs">
+                        <span className="text-muted-foreground">{job.posted}</span>
+                        <span className="font-semibold text-primary">{job.applicants} candidatos</span>
+                      </div>
                     </div>
-                    <p className="mt-2 text-sm font-semibold text-primary">{job.salary}</p>
-                    <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-4 text-xs">
-                      <span className="text-muted-foreground">{job.posted}</span>
-                      <span className="font-semibold text-primary">{job.applicants} candidatos</span>
+                  </Link>
+                  {(idx + 1) % 5 === 0 && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <AdBanner ad={ADS[Math.floor(idx / 5) % ADS.length]} />
                     </div>
-                  </div>
-                </Link>
-                {(idx + 1) % 5 === 0 && (
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <AdBanner ad={ADS[Math.floor(idx / 5) % ADS.length]} />
-                  </div>
-                )}
-              </Fragment>
-            ))}
+                  )}
+                </Fragment>
+              ))}
+            </div>
           </div>
 
-
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="mt-10 rounded-3xl border border-dashed border-border/60 bg-card p-16 text-center">
-            <p className="text-lg text-muted-foreground">Nenhuma vaga encontrada com esses filtros.</p>
-          </div>
-        )}
+          {filtered.length === 0 && (
+            <div className="mt-10 rounded-3xl border border-dashed border-border/60 bg-card p-16 text-center">
+              <p className="text-lg text-muted-foreground">Nenhuma vaga encontrada com esses filtros.</p>
+            </div>
+          )}
+        </SubscriptionGuard>
       </div>
     </div>
   );

@@ -5,14 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  CreditCard, QrCode, Check, Loader2, Copy, CheckCircle2,
-  ArrowLeft, Smartphone, Mail, Lock, Eye, EyeOff, User,
+  CreditCard, QrCode, Check, Loader2, Copy,
+  CheckCircle2, ArrowLeft, Smartphone, LogIn,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { activateSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 
 export type CheckoutPlan = {
   name: string;
@@ -28,57 +27,43 @@ type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   plan: CheckoutPlan;
+  onSuccess?: () => void; // callback after activation (e.g. refresh subscription)
 };
 
-type Step = "method" | "pix" | "card" | "processing" | "register" | "success";
+type Step = "method" | "pix" | "card" | "processing" | "success";
 
 const FAKE_PIX_KEY = "00020126580014BR.GOV.BCB.PIX013636f14b5e-9f7b-4c13-88d9-3e7a6d2f01995204000053039865802BR5914FORBIN PLATAFOR6009SAO PAULO62070503***63047B2D";
 const FAKE_QR = "https://api.qrserver.com/v1/create-qr-code/?data=FORBIN_PAGAMENTO_SIMULADO&size=180x180&bgcolor=0a0a0a&color=F5C518&margin=8";
 
-export function CheckoutModal({ open, onOpenChange, plan }: Props) {
+export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
   const [copied, setCopied] = useState(false);
-
-  // Card form
   const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
 
-  // Register form
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
-  const [registering, setRegistering] = useState(false);
-
   const role = plan.audience === "professional" ? "professional" : "company";
 
   const reset = () => {
-    setStep("method");
-    setCopied(false);
+    setStep("method"); setCopied(false);
     setCardNumber(""); setCardName(""); setCardExpiry(""); setCardCvv("");
-    setEmail(""); setPassword(""); setConfirmPassword("");
-    setRegistering(false);
   };
-
   const handleClose = (v: boolean) => { if (!v) reset(); onOpenChange(v); };
 
-  // ── After payment succeeds: activate or go to register ──
-  const handlePaymentSuccess = () => {
+  const processPayment = () => {
     setStep("processing");
     setTimeout(async () => {
-      if (user) {
-        // Already logged in — just activate subscription
-        const err = await activateSubscription(user.id, role, plan.periodRaw, plan.slug);
-        if (err) { toast.error("Erro ao ativar plano: " + err.message); setStep("card"); }
-        else setStep("success");
-      } else {
-        // Not logged in → need to register first
-        setStep("register");
+      if (!user) {
+        toast.error("Faça login antes de assinar.");
+        setStep("method");
+        return;
       }
+      const err = await activateSubscription(user.id, role, plan.periodRaw, plan.slug);
+      if (err) { toast.error("Erro ao ativar plano: " + err.message); setStep("method"); }
+      else { setStep("success"); onSuccess?.(); }
     }, 2200);
   };
 
@@ -86,32 +71,7 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
     navigator.clipboard.writeText(FAKE_PIX_KEY).catch(() => {});
     setCopied(true);
     toast.success("Código PIX copiado!");
-    setTimeout(() => handlePaymentSuccess(), 1500);
-  };
-
-  // ── Register after payment ──
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) { toast.error("As senhas não coincidem!"); return; }
-    if (password.length < 6) { toast.error("A senha precisa ter ao menos 6 caracteres."); return; }
-    setRegistering(true);
-    try {
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { role } },
-      });
-      if (signUpErr) throw signUpErr;
-      const userId = signUpData.user?.id;
-      if (!userId) throw new Error("Erro ao criar usuário.");
-      const subErr = await activateSubscription(userId, role, plan.periodRaw, plan.slug);
-      if (subErr) throw subErr;
-      setStep("success");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao criar conta.");
-    } finally {
-      setRegistering(false);
-    }
+    setTimeout(() => processPayment(), 1500);
   };
 
   const formatCard = (v: string) =>
@@ -124,14 +84,13 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
     cardExpiry.length === 5 &&
     cardCvv.length >= 3;
 
-  const roleLabel = role === "professional" ? "Profissional" : "Empresa";
   const dashboardPath = role === "professional" ? "/perfil" : "/empresa";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md bg-[#0a0a0a] border border-border/60 text-foreground p-0 overflow-hidden rounded-3xl">
 
-        {/* ── Header ── */}
+        {/* Header */}
         {step !== "success" && (
           <div className="flex items-center justify-between border-b border-border/40 px-6 py-4">
             {(step === "pix" || step === "card") ? (
@@ -144,8 +103,23 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
           </div>
         )}
 
-        {/* ── Plan Summary (hide on register/success) ── */}
-        {step !== "success" && step !== "register" && (
+        {/* Not logged in guard */}
+        {!user && step === "method" && (
+          <div className="flex flex-col items-center gap-4 p-8 text-center">
+            <LogIn className="h-10 w-10 text-primary" />
+            <div>
+              <p className="font-display text-lg font-bold">Entre na sua conta primeiro</p>
+              <p className="text-sm text-muted-foreground mt-1">Você precisa estar logado para assinar um plano.</p>
+            </div>
+            <Button asChild className="w-full h-12 rounded-full bg-primary font-bold shadow-gold hover:bg-primary/90">
+              <Link to="/login">Entrar na conta</Link>
+            </Button>
+            <p className="text-xs text-muted-foreground">Não tem conta? <Link to="/cadastro" className="text-primary underline">Criar conta grátis</Link></p>
+          </div>
+        )}
+
+        {/* Plan Summary */}
+        {user && step !== "success" && (
           <div className="mx-6 mt-5 rounded-2xl border border-primary/30 bg-primary/8 px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Você está assinando</p>
             <div className="flex items-center justify-between">
@@ -156,42 +130,26 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
           </div>
         )}
 
-        {/* ═══ METHOD ═══ */}
-        {step === "method" && (
+        {/* METHOD */}
+        {user && step === "method" && (
           <div className="p-6 space-y-3">
             <p className="text-sm font-semibold text-muted-foreground mb-4">Escolha a forma de pagamento</p>
-            <button
-              onClick={() => setStep("pix")}
-              className="w-full flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition hover:border-primary/50 hover:bg-primary/5 group"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
-                <QrCode className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">PIX</p>
-                <p className="text-sm text-muted-foreground">Pagamento instantâneo · <span className="text-primary font-semibold">{plan.pixLabel}</span></p>
-              </div>
+            <button onClick={() => setStep("pix")} className="w-full flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition hover:border-primary/50 hover:bg-primary/5 group">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition"><QrCode className="h-6 w-6" /></div>
+              <div className="flex-1"><p className="font-semibold">PIX</p><p className="text-sm text-muted-foreground">Pagamento instantâneo · <span className="text-primary font-semibold">{plan.pixLabel}</span></p></div>
               <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground group-hover:text-primary transition" />
             </button>
-            <button
-              onClick={() => setStep("card")}
-              className="w-full flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition hover:border-primary/50 hover:bg-primary/5 group"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
-                <CreditCard className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">Cartão de Crédito</p>
-                <p className="text-sm text-muted-foreground">{plan.installmentLabel} no cartão</p>
-              </div>
+            <button onClick={() => setStep("card")} className="w-full flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition hover:border-primary/50 hover:bg-primary/5 group">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition"><CreditCard className="h-6 w-6" /></div>
+              <div className="flex-1"><p className="font-semibold">Cartão de Crédito</p><p className="text-sm text-muted-foreground">{plan.installmentLabel} no cartão</p></div>
               <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground group-hover:text-primary transition" />
             </button>
             <p className="text-center text-xs text-muted-foreground pt-2">🔒 Ambiente seguro · Dados protegidos</p>
           </div>
         )}
 
-        {/* ═══ PIX ═══ */}
-        {step === "pix" && (
+        {/* PIX */}
+        {user && step === "pix" && (
           <div className="p-6 flex flex-col items-center gap-4">
             <div className="relative">
               <div className="h-[180px] w-[180px] rounded-2xl overflow-hidden border-2 border-primary/40 bg-[#0a0a0a] flex items-center justify-center">
@@ -203,64 +161,45 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
               <p className="text-sm font-semibold">Escaneie o QR Code ou copie o código</p>
               <p className="text-xs text-muted-foreground mt-1">Abra o app do seu banco e pague via PIX</p>
             </div>
-            <button
-              onClick={handleCopyPix}
-              className="w-full flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-surface px-4 py-3 text-xs text-muted-foreground hover:border-primary/40 transition"
-            >
+            <button onClick={handleCopyPix} className="w-full flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-surface px-4 py-3 text-xs text-muted-foreground hover:border-primary/40 transition">
               <span className="truncate font-mono">{FAKE_PIX_KEY.slice(0, 48)}...</span>
               {copied ? <Check className="h-4 w-4 text-success shrink-0" /> : <Copy className="h-4 w-4 shrink-0 text-primary" />}
             </button>
             <Button onClick={handleCopyPix} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold">
               {copied ? <><Check className="mr-2 h-4 w-4" /> Código copiado!</> : <><Copy className="mr-2 h-4 w-4" /> Copiar código PIX</>}
             </Button>
-            <p className="text-xs text-muted-foreground text-center">Após confirmar o pagamento, sua conta será criada automaticamente.</p>
           </div>
         )}
 
-        {/* ═══ CARD ═══ */}
-        {step === "card" && (
+        {/* CARD */}
+        {user && step === "card" && (
           <div className="p-6 space-y-4">
             <div className="relative h-36 w-full rounded-2xl bg-gradient-to-br from-primary/30 via-primary/10 to-transparent border border-primary/30 p-5 overflow-hidden">
               <div className="absolute right-4 top-4 flex gap-1">
-                <div className="h-5 w-5 rounded-full bg-primary/60" />
-                <div className="h-5 w-5 -ml-2 rounded-full bg-primary/40" />
+                <div className="h-5 w-5 rounded-full bg-primary/60" /><div className="h-5 w-5 -ml-2 rounded-full bg-primary/40" />
               </div>
-              <p className="font-mono text-lg font-bold tracking-widest text-primary mt-6">
-                {cardNumber || "•••• •••• •••• ••••"}
-              </p>
+              <p className="font-mono text-lg font-bold tracking-widest text-primary mt-6">{cardNumber || "•••• •••• •••• ••••"}</p>
               <div className="mt-2 flex items-center justify-between">
                 <p className="text-xs text-muted-foreground font-semibold uppercase">{cardName || "NOME NO CARTÃO"}</p>
                 <p className="text-xs text-muted-foreground font-mono">{cardExpiry || "MM/AA"}</p>
               </div>
             </div>
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Número do cartão</Label>
-                <Input value={cardNumber} onChange={e => setCardNumber(formatCard(e.target.value))} placeholder="0000 0000 0000 0000" className="bg-surface font-mono" maxLength={19} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Nome no cartão</Label>
-                <Input value={cardName} onChange={e => setCardName(e.target.value.toUpperCase())} placeholder="COMO ESCRITO NO CARTÃO" className="bg-surface uppercase" />
-              </div>
+              <div className="space-y-1.5"><Label className="text-xs">Número do cartão</Label><Input value={cardNumber} onChange={e => setCardNumber(formatCard(e.target.value))} placeholder="0000 0000 0000 0000" className="bg-surface font-mono" maxLength={19} /></div>
+              <div className="space-y-1.5"><Label className="text-xs">Nome no cartão</Label><Input value={cardName} onChange={e => setCardName(e.target.value.toUpperCase())} placeholder="COMO ESCRITO NO CARTÃO" className="bg-surface uppercase" /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Validade</Label>
-                  <Input value={cardExpiry} onChange={e => setCardExpiry(formatExpiry(e.target.value))} placeholder="MM/AA" className="bg-surface font-mono" maxLength={5} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">CVV</Label>
-                  <Input value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="•••" type="password" className="bg-surface font-mono" maxLength={4} />
-                </div>
+                <div className="space-y-1.5"><Label className="text-xs">Validade</Label><Input value={cardExpiry} onChange={e => setCardExpiry(formatExpiry(e.target.value))} placeholder="MM/AA" className="bg-surface font-mono" maxLength={5} /></div>
+                <div className="space-y-1.5"><Label className="text-xs">CVV</Label><Input value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="•••" type="password" className="bg-surface font-mono" maxLength={4} /></div>
               </div>
             </div>
-            <Button disabled={!cardValid} onClick={handlePaymentSuccess} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold disabled:opacity-40">
+            <Button disabled={!cardValid} onClick={processPayment} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold disabled:opacity-40">
               <CreditCard className="mr-2 h-4 w-4" /> Pagar {plan.installmentLabel}
             </Button>
             <p className="text-center text-xs text-muted-foreground">🔒 Seus dados estão protegidos</p>
           </div>
         )}
 
-        {/* ═══ PROCESSING ═══ */}
+        {/* PROCESSING */}
         {step === "processing" && (
           <div className="flex flex-col items-center justify-center gap-4 py-14 px-6">
             <div className="relative flex h-20 w-20 items-center justify-center">
@@ -272,69 +211,7 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
           </div>
         )}
 
-        {/* ═══ REGISTER (after payment, not logged in) ═══ */}
-        {step === "register" && (
-          <form onSubmit={handleRegister} className="p-6 space-y-4">
-            <div className="text-center mb-2">
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/15 border border-success/30">
-                <CheckCircle2 className="h-7 w-7 text-success" />
-              </div>
-              <p className="font-display text-xl font-bold">Pagamento confirmado!</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Agora crie sua conta <span className="text-primary font-semibold">{roleLabel}</span> para acessar a plataforma.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">E-mail</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="seu@email.com" className="bg-surface pl-10" required />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  type={showPwd ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
-                  className="bg-surface pl-10 pr-10"
-                  required
-                />
-                <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Confirmar senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  type={showPwd ? "text" : "password"}
-                  placeholder="Repita a senha"
-                  className="bg-surface pl-10"
-                  required
-                />
-              </div>
-            </div>
-
-            <Button type="submit" disabled={registering} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold disabled:opacity-60">
-              {registering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4" />}
-              {registering ? "Criando conta..." : "Criar minha conta"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">Já tem conta? <a href="/entrar" className="text-primary underline">Entrar</a></p>
-          </form>
-        )}
-
-        {/* ═══ SUCCESS ═══ */}
+        {/* SUCCESS */}
         {step === "success" && (
           <div className="flex flex-col items-center gap-5 py-10 px-8 text-center">
             <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-success/15 border-2 border-success/40">
@@ -342,24 +219,26 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
               <div className="absolute inset-0 animate-ping rounded-full bg-success/10" style={{ animationDuration: "2s" }} />
             </div>
             <div>
-              <p className="font-display text-2xl font-bold">Bem-vindo à Forbin! 🎉</p>
+              <p className="font-display text-2xl font-bold">Plano ativado! 🎉</p>
               <p className="text-muted-foreground mt-2 text-sm">
-                Sua conta <strong>{roleLabel}</strong> foi criada e o plano <strong>{plan.name}</strong> está ativo.
+                <strong>{plan.name}</strong> está ativo.
+                Acesso liberado por <strong>{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</strong>.
               </p>
             </div>
-            <div className="w-full rounded-2xl border border-success/30 bg-success/8 px-5 py-4 text-left">
+            <div className="w-full rounded-2xl border border-success/30 bg-success/8 px-5 py-4 text-left space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-success mb-2">Resumo</p>
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Plano</span><span className="font-semibold">{plan.name}</span></div>
-              <div className="flex justify-between text-sm mt-1"><span className="text-muted-foreground">Tipo de conta</span><span className="font-semibold">{roleLabel}</span></div>
-              <div className="flex justify-between text-sm mt-1"><span className="text-muted-foreground">Status</span><span className="text-success font-semibold">✓ Ativo</span></div>
-              <div className="flex justify-between text-sm mt-1"><span className="text-muted-foreground">Duração</span><span className="font-semibold">{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Duração</span><span className="font-semibold">{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Status</span><span className="text-success font-semibold">✓ Ativo</span></div>
             </div>
-            <Button
-              onClick={() => { handleClose(false); navigate({ to: dashboardPath as any }); }}
-              className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold"
-            >
-              Acessar meu painel
-            </Button>
+            <div className="flex gap-3 w-full">
+              <Button onClick={() => { handleClose(false); navigate({ to: dashboardPath as any }); }} className="flex-1 h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold">
+                Acessar painel
+              </Button>
+              <Button variant="outline" onClick={() => { handleClose(false); navigate({ to: "/minha-assinatura" as any }); }} className="flex-1 h-12 rounded-full">
+                Minha assinatura
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

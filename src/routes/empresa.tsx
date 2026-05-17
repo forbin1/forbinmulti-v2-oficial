@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 export const Route = createFileRoute("/empresa")({
   component: EmpresaLayout,
@@ -157,9 +158,11 @@ function EmpresaLayout() {
           </Sheet>
         </div>
 
-        {/* Nested Route Outlet */}
-        <main className="min-w-0 flex-1 overflow-x-hidden">
-          <Outlet />
+        {/* Nested Route Outlet wrapped in SubscriptionGuard */}
+        <main className="min-w-0 flex-1 overflow-x-hidden p-6 md:p-8">
+          <SubscriptionGuard requiredRole="company" feature="acessar o painel da empresa">
+            <Outlet />
+          </SubscriptionGuard>
         </main>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-
 import { createServerFn } from "@tanstack/react-start";
 import { Play, Lock } from "lucide-react";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 const getCourses = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -139,25 +139,27 @@ function CursosPage() {
       )}
 
       {/* Course Sections by Category */}
-      <div className="pb-20">
-        {grouped.map((g) => (
-          <section key={g.category} className="mt-12">
-            <div className="mb-4 px-4 sm:px-6 lg:px-10 flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">●</span>
-              <h2 className="font-display text-xl font-bold sm:text-2xl">{g.category}</h2>
-            </div>
+      <SubscriptionGuard feature="assistir cursos e obter certificados">
+        <div className="pb-20">
+          {grouped.map((g) => (
+            <section key={g.category} className="mt-12">
+              <div className="mb-4 px-4 sm:px-6 lg:px-10 flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-primary">●</span>
+                <h2 className="font-display text-xl font-bold sm:text-2xl">{g.category}</h2>
+              </div>
 
-            {/* Horizontal Scroll Container */}
-            <div className="flex gap-4 overflow-x-auto pb-8 pt-2 px-4 sm:px-6 lg:px-10 snap-x snap-mandatory hide-scrollbar">
-              {g.courses.map((course, i) => (
-                <div key={course.id} className="snap-start shrink-0 w-44 sm:w-52 lg:w-64">
-                  <CourseModule course={course} index={i} />
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+              {/* Horizontal Scroll Container */}
+              <div className="flex gap-4 overflow-x-auto pb-8 pt-2 px-4 sm:px-6 lg:px-10 snap-x snap-mandatory hide-scrollbar">
+                {g.courses.map((course, i) => (
+                  <div key={course.id} className="snap-start shrink-0 w-44 sm:w-52 lg:w-64">
+                    <CourseModule course={course} index={i} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </SubscriptionGuard>
     </div>
   );
 }
