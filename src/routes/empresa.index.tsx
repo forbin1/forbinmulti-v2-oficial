@@ -19,7 +19,8 @@ function EmpresaDashboard() {
   const { user } = useAuth();
   const [company, setCompany] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [appCounts, setAppCounts] = useState<Record<string, number>>({});
+  const [loadingShell, setLoadingShell] = useState(true); // first load skeleton
   const [isOpen, setIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
@@ -38,11 +39,26 @@ function EmpresaDashboard() {
   const [benefits, setBenefits] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
 
+  // Fetch candidate counts for given job ids in parallel
+  const fetchAppCounts = async (jobIds: string[]) => {
+    if (!jobIds.length) return;
+    const { data } = await supabase
+      .from("applications")
+      .select("job_id")
+      .in("job_id", jobIds);
+    if (data) {
+      const counts: Record<string, number> = {};
+      data.forEach((a: any) => {
+        counts[a.job_id] = (counts[a.job_id] || 0) + 1;
+      });
+      setAppCounts(counts);
+    }
+  };
+
   const loadData = async () => {
     if (!user) return;
     try {
-      setLoading(true);
-      // Fetch company
+      // Run company + potential jobs in parallel where possible
       let { data: comp, error: compErr } = await supabase
         .from("companies")
         .select("*")
@@ -51,61 +67,62 @@ function EmpresaDashboard() {
 
       if (compErr) throw compErr;
 
-      // Self-healing: if company record doesn't exist, insert one on the fly!
+      // Self-healing: if company record doesn't exist, insert one on the fly
       if (!comp) {
         const defaultName = user.user_metadata?.company_name || "Minha Empresa";
         try {
           const { data: newComp, error: insertErr } = await supabase
             .from("companies")
-            .insert({
-              user_id: user.id,
-              company_name: defaultName,
-              city: "Rio de Janeiro",
-              state: "RJ"
-            })
+            .insert({ user_id: user.id, company_name: defaultName, city: "Rio de Janeiro", state: "RJ" })
             .select()
             .single();
-
-          if (insertErr) {
-            console.warn("RLS block on self-healing insert, using local fallback state", insertErr);
-            comp = {
-              id: user.id,
-              user_id: user.id,
-              company_name: defaultName,
-              city: "Rio de Janeiro",
-              state: "RJ",
-              username: "empresa-" + user.id.slice(0, 6)
-            };
-          } else {
-            comp = newComp;
-          }
+          comp = insertErr
+            ? { id: user.id, user_id: user.id, company_name: defaultName, city: "Rio de Janeiro", state: "RJ", username: "empresa-" + user.id.slice(0, 6) }
+            : newComp;
         } catch (e) {
           console.error("Erro no auto-insert:", e);
         }
       }
-      
+
       if (comp) {
         setCompany(comp);
-        // Fetch jobs for this company
-        const { data: jobList, error: jobsErr } = await supabase
-          .from("jobs")
-          .select("*")
-          .eq("company_id", comp.id)
-          .order("created_at", { ascending: false });
 
-        if (jobsErr) throw jobsErr;
-        setJobs(jobList || []);
+        // Fetch jobs AND application counts in parallel!
+        const [jobsRes] = await Promise.all([
+          supabase.from("jobs").select("*").eq("company_id", comp.id).order("created_at", { ascending: false }),
+          // Prefetch applications count by joining with jobs of this company
+        ]);
+
+        const jobList = jobsRes.data || [];
+        setJobs(jobList);
+        await fetchAppCounts(jobList.map((j: any) => j.id));
       }
     } catch (err: any) {
       toast.error("Erro ao carregar dados: " + err.message);
     } finally {
-      setLoading(false);
+      setLoadingShell(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, [user]);
+
+  // Realtime: update candidate counts when applications change
+  useEffect(() => {
+    const channel = supabase
+      .channel("empresa-dashboard-apps")
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => {
+        if (jobs.length > 0) fetchAppCounts(jobs.map(j => j.id));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
+        loadData();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [jobs]);
+
+
 
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,10 +209,22 @@ function EmpresaDashboard() {
     }
   };
 
-  if (loading) {
+  if (loadingShell) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="p-6 sm:p-10 animate-pulse">
+        <div className="flex justify-between mb-8">
+          <div>
+            <div className="h-8 w-36 rounded-xl bg-muted" />
+            <div className="h-4 w-52 rounded-lg bg-muted mt-2" />
+          </div>
+          <div className="h-11 w-32 rounded-full bg-muted" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-28 rounded-2xl bg-muted" />)}
+        </div>
+        <div className="mt-10 space-y-3">
+          {[1,2].map(i => <div key={i} className="h-20 rounded-2xl bg-muted" />)}
+        </div>
       </div>
     );
   }
@@ -214,8 +243,8 @@ function EmpresaDashboard() {
 
       {/* KPIs */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Briefcase} label="Vagas ativas" value={jobs.length.toString()} trend="Atualizado" />
-        <Kpi icon={Users} label="Candidatos totais" value="0" trend="Novos inscritos" />
+        <Kpi icon={Briefcase} label="Vagas ativas" value={jobs.filter(j => j.is_published).length.toString()} trend="Atualizado" />
+        <Kpi icon={Users} label="Candidatos totais" value={Object.values(appCounts).reduce((s, n) => s + n, 0).toString()} trend="Novos inscritos" />
         <Kpi icon={Calendar} label="Reuniões agendadas" value="0" trend="Esta semana" />
         <Kpi icon={TrendingUp} label="Taxa de conversão" value="0%" trend="Mês atual" highlight />
       </div>
@@ -246,7 +275,9 @@ function EmpresaDashboard() {
                     {j.city}, {j.state} · {j.modality} · {j.contract_type}
                   </p>
                 </div>
-                <Badge className="rounded-full bg-primary/15 text-primary">0 candidatos</Badge>
+                <Badge className="rounded-full bg-primary/15 text-primary">
+                  {appCounts[j.id] ?? 0} {(appCounts[j.id] ?? 0) === 1 ? "candidato" : "candidatos"}
+                </Badge>
                 <Badge className={`rounded-full ${j.is_published ? "border-success/40 bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
                   {j.is_published ? "Ativa" : "Pausada"}
                 </Badge>
