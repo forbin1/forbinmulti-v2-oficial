@@ -85,6 +85,29 @@ function PerfilEmpresa() {
 
   useEffect(() => {
     loadData();
+
+    if (!user) return;
+
+    // Supabase Realtime Subscription for instant profile updates!
+    const channel = supabase
+      .channel("company-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "companies",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setCompany(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const coverInput = useRef<HTMLInputElement>(null);
@@ -95,24 +118,34 @@ function PerfilEmpresa() {
     const file = e.target.files[0];
     
     try {
-      // Basic simulation since direct storage buckets require configuration
       toast.info(`Fazendo upload da ${kind === 'cover' ? 'capa' : 'foto de perfil'}...`);
       
-      // In production, we upload to supabase storage bucket and update the URL.
-      // Here we will use a generic placeholder URL for the demo
-      const simulatedUrl = URL.createObjectURL(file);
-      
-      if (kind === "avatar") {
-        const { error } = await supabase
-          .from("companies")
-          .update({ logo_url: simulatedUrl })
-          .eq("id", company.id);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        
+        if (kind === "avatar") {
+          const { error } = await supabase
+            .from("companies")
+            .update({ logo_url: base64 })
+            .eq("id", company.id);
 
-        if (error) throw error;
-        setCompany((prev: any) => ({ ...prev, logo_url: simulatedUrl }));
-      }
+          if (error) throw error;
+          setCompany((prev: any) => ({ ...prev, logo_url: base64 }));
+          toast.success("Foto de perfil atualizada com sucesso!");
+        } else {
+          const { error } = await supabase
+            .from("companies")
+            .update({ cover_url: base64 })
+            .eq("id", company.id);
+
+          if (error) throw error;
+          setCompany((prev: any) => ({ ...prev, cover_url: base64 }));
+          toast.success("Foto de capa atualizada com sucesso!");
+        }
+      };
       
-      toast.success(kind === "cover" ? "Foto de capa atualizada!" : "Logotipo atualizado!");
+      reader.readAsDataURL(file);
     } catch (err: any) {
       toast.error("Erro ao atualizar foto: " + err.message);
     }
@@ -160,9 +193,15 @@ function PerfilEmpresa() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {/* Capa */}
-      <div className="relative mb-[-72px] h-44 overflow-hidden rounded-3xl border border-border/60 sm:h-56">
-        <div className="absolute inset-0 bg-gradient-gold opacity-25" />
-        <div className="absolute inset-0 bg-radial-gold" />
+      <div className="relative mb-[-72px] h-44 overflow-hidden rounded-3xl border border-border/60 sm:h-56 bg-surface">
+        {company?.cover_url ? (
+          <img src={company.cover_url} alt="Capa" className="h-full w-full object-cover" />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-gold opacity-25" />
+            <div className="absolute inset-0 bg-radial-gold" />
+          </>
+        )}
         <button onClick={() => coverInput.current?.click()} className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-black/80">
           <Camera className="h-4 w-4" /> Alterar Capa
         </button>
