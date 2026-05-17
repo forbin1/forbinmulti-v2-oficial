@@ -661,7 +661,7 @@ function BannerDialog({
     const path = `landing/banner-${rand}.${ext}`;
     
     const { error } = await supabase.storage
-      .from("landing")
+      .from("certificates")
       .upload(path, file, { upsert: false });
 
     if (error) {
@@ -670,7 +670,7 @@ function BannerDialog({
       return;
     }
 
-    const { data } = supabase.storage.from("landing").getPublicUrl(path);
+    const { data } = supabase.storage.from("certificates").getPublicUrl(path);
     setForm(f => ({ ...f, image_url: data.publicUrl }));
     setUploading(false);
     toast.success("Imagem de banner carregada!");
