@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Bell, Menu, Search, LogOut, User } from "lucide-react";
+import { Bell, Menu, Search, LogOut, User, BookOpen, MapPin, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
@@ -15,6 +15,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { JOBS, COURSES } from "@/data/mock";
 
 type NavItem = { to: string; label: string };
 
@@ -71,6 +72,12 @@ export function SiteHeader() {
     }
   }, [user]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  
+  const filteredJobs = searchQuery.trim() ? JOBS.filter(job => job.title.toLowerCase().includes(searchQuery.toLowerCase()) || job.company.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3) : [];
+  const filteredCourses = searchQuery.trim() ? COURSES.filter(course => course.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3) : [];
+
   const handleSignOut = async () => {
     await signOut();
     navigate({ to: "/" });
@@ -111,12 +118,63 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-3 md:flex">
-          <div className="relative">
+          <div className="relative" onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setShowSearch(false);
+            }
+          }}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar vagas, empresas, profissionais…"
-              className="h-11 w-72 rounded-full border-border/70 bg-surface pl-10 text-sm"
+              className="h-11 w-72 rounded-full border-border/70 bg-surface pl-10 text-sm focus-visible:ring-primary/50"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearch(true);
+              }}
+              onFocus={() => setShowSearch(true)}
             />
+            
+            {/* Dropdown de Resultados */}
+            {showSearch && searchQuery.trim() && (filteredJobs.length > 0 || filteredCourses.length > 0) && (
+              <div className="absolute top-[calc(100%+8px)] left-0 w-[400px] rounded-2xl border border-border/60 bg-card/95 p-4 shadow-2xl backdrop-blur-xl z-50">
+                {filteredJobs.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">Vagas</h3>
+                    <ul className="space-y-2">
+                      {filteredJobs.map(job => (
+                        <li key={job.id}>
+                          <Link to="/vagas/$jobId" params={{ jobId: job.id }} className="block rounded-lg p-2 hover:bg-accent transition" onClick={() => setShowSearch(false)}>
+                            <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
+                            <p className="mt-1 text-xs text-muted-foreground truncate flex items-center gap-2">
+                              <span className="flex items-center gap-1"><Briefcase className="h-3 w-3"/> {job.companyInitials}</span>
+                              <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/> {job.location}</span>
+                            </p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {filteredCourses.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">Cursos</h3>
+                    <ul className="space-y-2">
+                      {filteredCourses.map((course, i) => (
+                        <li key={i}>
+                          <Link to="/cursos" className="flex items-center gap-3 rounded-lg p-2 hover:bg-accent transition" onClick={() => setShowSearch(false)}>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                               <BookOpen className="h-4 w-4" />
+                            </div>
+                            <p className="text-sm font-medium text-foreground truncate">{course}</p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {!loading && user ? (
