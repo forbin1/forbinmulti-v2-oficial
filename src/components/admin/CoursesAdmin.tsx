@@ -45,8 +45,9 @@ type Course = {
   thumbnail_url: string | null;
   price: number | null;
   is_published: boolean;
-  affiliate_available?: boolean;
+  affiliate_available: boolean;
   commission_percentage?: number | null;
+  show_in_marketplace: boolean;
 };
 
 const EMPTY: Omit<Course, "id"> = {
@@ -62,6 +63,7 @@ const EMPTY: Omit<Course, "id"> = {
   is_published: true,
   affiliate_available: false,
   commission_percentage: 0,
+  show_in_marketplace: false,
 };
 
 export function CoursesAdmin({
@@ -288,6 +290,7 @@ function CourseDialog({
           ...rest, 
           description: desc.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim(),
           affiliate_available: rest.affiliate_available ?? false,
+          show_in_marketplace: rest.show_in_marketplace ?? false,
           commission_percentage: rest.commission_percentage ?? 0
         });
       } else {
@@ -295,6 +298,7 @@ function CourseDialog({
         setForm({
           ...rest,
           affiliate_available: rest.affiliate_available ?? false,
+          show_in_marketplace: rest.show_in_marketplace ?? false,
           commission_percentage: rest.commission_percentage ?? 0
         });
       }
@@ -369,6 +373,7 @@ function CourseDialog({
       total_lessons: Number(form.total_lessons) || 0,
       price: form.price ? Number(form.price) : null,
       affiliate_available: form.affiliate_available ?? false,
+      show_in_marketplace: form.show_in_marketplace ?? false,
       commission_percentage: form.affiliate_available ? (Number(form.commission_percentage) || 0) : null,
     };
 
@@ -505,8 +510,8 @@ function CourseDialog({
                   className="h-4 w-4 rounded border-border bg-surface text-primary focus:ring-primary"
                 />
                 <div>
-                  <span className="font-semibold block">Disponível para Afiliação</span>
-                  <span className="text-xs text-muted-foreground">Mostrar no marketplace para empresas</span>
+                  <span className="font-semibold block">Permitir Afiliação</span>
+                  <span className="text-xs text-muted-foreground">O curso gera comissão para parceiros</span>
                 </div>
               </label>
 
@@ -521,6 +526,19 @@ function CourseDialog({
                   />
                 </Field>
               )}
+              
+              <label className="flex items-center gap-2.5 text-sm cursor-pointer sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.show_in_marketplace || false}
+                  onChange={(e) => set("show_in_marketplace", e.target.checked)}
+                  className="h-4 w-4 rounded border-border bg-surface text-primary focus:ring-primary"
+                />
+                <div>
+                  <span className="font-semibold block">Mostrar no Marketplace</span>
+                  <span className="text-xs text-muted-foreground">Listar o curso na vitrine pública para empresas e profissionais comprarem/afiliarem</span>
+                </div>
+              </label>
             </div>
           </div>
 
