@@ -40,6 +40,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Atualiza estado imediatamente — NÃO use await aqui (deadlock do Supabase)
         setState((prev) => ({ user, session, loading: false, role: prev.role }));
         if (user) {
+          // Check for pending company registration sync
+          const pendingSync = localStorage.getItem(`pending_company_sync_${user.id}`);
+          if (pendingSync) {
+            try {
+              const parsed = JSON.parse(pendingSync);
+              supabase.from("companies").update(parsed).eq("user_id", user.id).then(({ error }) => {
+                if (!error) {
+                  localStorage.removeItem(`pending_company_sync_${user.id}`);
+                  console.log("Successfully synced pending company profile!");
+                } else {
+                  console.error("Error syncing pending company:", error);
+                }
+              });
+            } catch (e) {
+              console.error("Error parsing pending company sync:", e);
+            }
+          }
+
           // Busca role de forma diferida (fire-and-forget)
           setTimeout(() => {
             fetchRole(user.id).then((fetchedRole) => {
@@ -57,6 +75,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const user = session?.user ?? null;
       setState((prev) => ({ user, session, loading: false, role: prev.role }));
       if (user) {
+        // Check for pending company registration sync
+        const pendingSync = localStorage.getItem(`pending_company_sync_${user.id}`);
+        if (pendingSync) {
+          try {
+            const parsed = JSON.parse(pendingSync);
+            supabase.from("companies").update(parsed).eq("user_id", user.id).then(({ error }) => {
+              if (!error) {
+                localStorage.removeItem(`pending_company_sync_${user.id}`);
+                console.log("Successfully synced pending company profile on initial session!");
+              }
+            });
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
         fetchRole(user.id).then((fetchedRole) => {
           const finalRole = fetchedRole || user.user_metadata?.role || "professional";
           setState((prev) => ({ ...prev, role: finalRole }));

@@ -37,6 +37,13 @@ function CadastroEmpresa() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
 
+  // Step 2 & 4 - Details
+  const [cnpj, setCnpj] = useState("");
+  const [employeeCount, setEmployeeCount] = useState("50");
+  const [description, setDescription] = useState("");
+  const [phone, setPhone] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+
   const handleCreateAccount = async () => {
     if (!email || !password || !companyName) {
       toast.error("Preencha todos os campos obrigatórios");
@@ -51,7 +58,7 @@ function CadastroEmpresa() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -66,6 +73,9 @@ function CadastroEmpresa() {
       toast.error(error.message);
       return;
     }
+    if (data?.user) {
+      setUserId(data.user.id);
+    }
     toast.success("Conta criada! Verifique seu email para confirmar o cadastro.");
     setStep(2);
   };
@@ -78,9 +88,41 @@ function CadastroEmpresa() {
     setStep((s) => Math.min(STEPS.length, s + 1));
   };
 
-  const handleFinish = () => {
-    toast.success("Cadastro da empresa finalizado!");
-    navigate({ to: "/login" });
+  const handleFinish = async () => {
+    setLoading(true);
+    try {
+      let targetUserId = userId;
+      if (!targetUserId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        targetUserId = session?.user?.id || null;
+      }
+
+      const syncData = {
+        cnpj,
+        description,
+        phone,
+        employee_count: employeeCount ? parseInt(employeeCount) || null : null,
+      };
+
+      if (targetUserId) {
+        // Try to update company table immediately
+        await supabase
+          .from("companies")
+          .update(syncData)
+          .eq("user_id", targetUserId);
+
+        // Save to local storage for pending sync when they log in
+        localStorage.setItem(`pending_company_sync_${targetUserId}`, JSON.stringify(syncData));
+      }
+
+      toast.success("Cadastro da empresa finalizado!");
+      navigate({ to: "/login" });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao salvar cadastro: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,7 +183,7 @@ function CadastroEmpresa() {
             <h2 className="font-display text-2xl font-bold">Sobre a empresa</h2>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="Razão social"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="Nome jurídico" /></Field>
-              <Field label="CNPJ"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="00.000.000/0000-00" /></Field>
+              <Field label="CNPJ"><Input value={cnpj} onChange={(e) => setCnpj(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="00.000.000/0000-00" /></Field>
               <Field label="Inscrição estadual"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="Opcional" /></Field>
               <Field label="Setor de atuação">
                 <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
@@ -153,12 +195,15 @@ function CadastroEmpresa() {
                 </select>
               </Field>
               <Field label="Nº de colaboradores">
-                <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
-                  <option>1 — 10</option><option>11 — 50</option><option>51 — 200</option><option>200+</option>
+                <select value={employeeCount} onChange={(e) => setEmployeeCount(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
+                  <option value="10">1 — 10</option>
+                  <option value="50">11 — 50</option>
+                  <option value="200">51 — 200</option>
+                  <option value="500">200+</option>
                 </select>
               </Field>
               <div className="sm:col-span-2">
-                <Field label="Descrição da empresa"><Textarea rows={4} className="rounded-xl bg-surface text-base" placeholder="Conte sobre sua empresa, áreas de atuação, diferenciais..." /></Field>
+                <Field label="Descrição da empresa"><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="rounded-xl bg-surface text-base" placeholder="Conte sobre sua empresa, áreas de atuação, diferenciais..." /></Field>
               </div>
             </div>
           </div>
@@ -190,7 +235,7 @@ function CadastroEmpresa() {
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="Nome completo"><Input className="h-12 rounded-xl bg-surface text-base" /></Field>
               <Field label="Cargo"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="Ex: Diretor de RH" /></Field>
-              <Field label="WhatsApp"><Input className="h-12 rounded-xl bg-surface text-base" /></Field>
+              <Field label="WhatsApp"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="(00) 00000-0000" /></Field>
             </div>
 
             <div className="rounded-2xl border border-primary/40 bg-primary/5 p-5">
