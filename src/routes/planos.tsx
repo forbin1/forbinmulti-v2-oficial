@@ -51,9 +51,9 @@ const DEFAULT_PLANS: Plan[] = [
     slug: "profissional-anual",
     name: "Profissional Anual",
     audience: "professional",
-    price_cents: 29790,
+    price_cents: 33480,
     period: "year",
-    description: "Economize e garanta sua presença o ano todo.",
+    description: "Garanta sua presença o ano todo com o mesmo valor mensal.",
     features: ["Todos os benefícios do Mensal", "Suporte prioritário", "Acesso a cursos exclusivos", "Análise de currículo por especialistas"],
     cta_label: "Assinar Anual",
     highlight: true,
@@ -272,14 +272,14 @@ function AnnualProfCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Anual — Melhor custo-benefício</p>
       <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
 
-      {/* Big installment */}
+      {/* Big installment — inline on one line */}
       <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">No cartão</p>
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-semibold text-muted-foreground">12x de</span>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">No cartão</p>
+        <div className="flex items-baseline gap-3 flex-wrap">
           <span className="font-display text-5xl font-black text-primary">
             R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
+          <span className="text-2xl font-bold text-foreground">12x</span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
@@ -319,14 +319,14 @@ function AnnualEmpresaCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Anual — Máxima performance</p>
       <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
 
-      {/* Big installment */}
+      {/* Big installment — inline on one line */}
       <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">No cartão</p>
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-semibold text-muted-foreground">12x de</span>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">No cartão</p>
+        <div className="flex items-baseline gap-3 flex-wrap">
           <span className="font-display text-5xl font-black text-primary">
             R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
+          <span className="text-2xl font-bold text-foreground">12x</span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
