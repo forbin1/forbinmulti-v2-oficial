@@ -126,7 +126,7 @@ function EmpresaPublicProfile() {
           const { error } = await supabase
             .from("companies")
             .update({ logo_url: base64 })
-            .eq("id", company.id);
+            .eq("user_id", company.user_id);
 
           if (error) throw error;
           setCompany((prev: any) => ({ ...prev, logo_url: base64 }));
@@ -135,7 +135,7 @@ function EmpresaPublicProfile() {
           const { error } = await supabase
             .from("companies")
             .update({ cover_url: base64 })
-            .eq("id", company.id);
+            .eq("user_id", company.user_id);
 
           if (error) throw error;
           setCompany((prev: any) => ({ ...prev, cover_url: base64 }));

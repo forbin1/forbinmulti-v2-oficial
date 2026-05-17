@@ -140,7 +140,7 @@ function PerfilEmpresa() {
   const avatarInput = useRef<HTMLInputElement>(null);
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>, kind: "cover" | "avatar") => {
-    if (!e.target.files || e.target.files.length === 0 || !company) return;
+    if (!e.target.files || e.target.files.length === 0 || !company || !user) return;
     const file = e.target.files[0];
     
     try {
@@ -154,7 +154,7 @@ function PerfilEmpresa() {
           const { error } = await supabase
             .from("companies")
             .update({ logo_url: base64 })
-            .eq("id", company.id);
+            .eq("user_id", user.id);
 
           if (error) throw error;
           setCompany((prev: any) => ({ ...prev, logo_url: base64 }));
@@ -163,7 +163,7 @@ function PerfilEmpresa() {
           const { error } = await supabase
             .from("companies")
             .update({ cover_url: base64 })
-            .eq("id", company.id);
+            .eq("user_id", user.id);
 
           if (error) throw error;
           setCompany((prev: any) => ({ ...prev, cover_url: base64 }));
