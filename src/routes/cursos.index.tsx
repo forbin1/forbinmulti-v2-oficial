@@ -9,12 +9,23 @@ import { cn } from "@/lib/utils";
 
 const getCourses = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
-    .from("courses")
-    .select("*")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false });
-  return (data as Course[]) || [];
+  const [{ data: courses }, { data: banner }] = await Promise.all([
+    supabaseAdmin
+      .from("courses")
+      .select("*")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("site_settings")
+      .select("value")
+      .eq("key", "courses_banner")
+      .single()
+  ]);
+  
+  return {
+    courses: (courses as Course[]) || [],
+    bannerSettings: banner?.value ? JSON.parse(banner.value) : null
+  };
 });
 
 export const Route = createFileRoute("/cursos/")({
@@ -42,8 +53,10 @@ type Course = {
 };
 
 function CursosPage() {
-  const rawCourses = Route.useLoaderData() as Course[];
+  const loaderData = Route.useLoaderData();
+  const rawCourses = loaderData.courses as Course[];
   let courses = rawCourses || [];
+  const bannerSettings = loaderData.bannerSettings;
   
   const { user } = useAuth();
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
@@ -66,6 +79,29 @@ function CursosPage() {
       if (allLs) setLessonsList(allLs || []);
     }
     loadProgress();
+
+    if (!user) return;
+
+    // Real-time subscription to lesson_progress changes
+    const channel = supabase
+      .channel('schema-db-changes-courses')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lesson_progress',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          loadProgress();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   if (courses.length === 0) {
@@ -89,21 +125,44 @@ function CursosPage() {
   }));
 
   const heroCourse = courses[0];
+  const bannerImage = bannerSettings?.image_url || heroCourse?.thumbnail_url || "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1920&h=640&fit=crop";
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Banner - Full Width */}
-      {heroCourse && (
-        <section className="relative w-full overflow-hidden">
-          <div className="relative aspect-[1920/800] max-h-[80vh] w-full">
-            <img
-              src={heroCourse.thumbnail_url || "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1920&h=640&fit=crop"}
-              alt={heroCourse.title}
-              className="h-full w-full object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-transparent" />
+      <section className="relative w-full overflow-hidden">
+        <div className="relative aspect-[1920/800] max-h-[80vh] w-full bg-muted">
+          <img
+            src={bannerImage}
+            alt="Banner de Cursos"
+            className="h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-transparent" />
+        </div>
+        
+        {/* Only show text block if there is a title */}
+        {bannerSettings?.title ? (
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-5 text-left sm:p-10 lg:p-16">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary sm:text-xs">
+              {bannerSettings?.subtitle || "Área de Membros"}
+            </p>
+            <h1 className="font-display text-base font-bold leading-tight sm:text-4xl lg:text-5xl">
+              {bannerSettings?.title}
+            </h1>
+            <p className="mt-1 max-w-xl text-[11px] leading-snug text-white/70 sm:mt-2 sm:text-base">
+              {bannerSettings?.description || ""}
+            </p>
+            {bannerSettings?.button_text && bannerSettings?.button_link && (
+              <Link
+                to={bannerSettings.button_link as any}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:mt-4 sm:px-5 sm:py-2.5 sm:text-sm"
+              >
+                {bannerSettings.button_text}
+              </Link>
+            )}
           </div>
+        ) : (!bannerSettings && heroCourse) ? (
           <div className="absolute bottom-0 left-0 right-0 px-4 py-5 text-left sm:p-10 lg:p-16">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary sm:text-xs">
               Área de Membros
@@ -122,8 +181,8 @@ function CursosPage() {
               Começar agora
             </Link>
           </div>
-        </section>
-      )}
+        ) : null}
+      </section>
 
       {/* Course Sections by Category */}
       <SubscriptionGuard feature="assistir cursos e obter certificados">

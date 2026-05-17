@@ -17,6 +17,7 @@ import {
   PartyPopper,
   Circle,
   FileText,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -82,6 +83,7 @@ function CourseDetailPage() {
   const [adminCertificate, setAdminCertificate] = useState<any>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [isMaterialOpen, setIsMaterialOpen] = useState(false);
 
   useEffect(() => {
     void loadAll();
@@ -171,7 +173,12 @@ function CourseDetailPage() {
     const isDone = completed.has(lessonId);
 
     if (isDone) {
-      await supabase.from("lesson_progress").delete().eq("user_id", user.id).eq("lesson_id", lessonId);
+      const { error } = await supabase.from("lesson_progress").delete().eq("user_id", user.id).eq("lesson_id", lessonId);
+      if (error) {
+        console.error("Error deleting progress:", error);
+        toast.error("Erro ao remover progresso: " + error.message);
+        return;
+      }
       setCompleted((prev) => {
         const next = new Set(prev);
         next.delete(lessonId);
@@ -180,10 +187,17 @@ function CourseDetailPage() {
       return;
     }
 
-    await supabase.from("lesson_progress").upsert(
+    const { error } = await supabase.from("lesson_progress").upsert(
       { user_id: user.id, lesson_id: lessonId, completed: true, completed_at: new Date().toISOString() },
       { onConflict: "user_id,lesson_id" },
     );
+    
+    if (error) {
+      console.error("Error saving progress:", error);
+      toast.error("Erro ao salvar progresso: " + error.message);
+      return;
+    }
+
     const next = new Set(completed).add(lessonId);
     setCompleted(next);
 
@@ -456,10 +470,12 @@ function CourseDetailPage() {
                       <p className="text-xs text-muted-foreground mt-0.5">Clique no botão para baixar a apostila ou material complementar oficial.</p>
                     </div>
                   </div>
-                  <Button asChild variant="outline" className="rounded-full text-xs shrink-0 hover:bg-primary hover:text-primary-foreground transition-all duration-300">
-                    <a href={materialUrl} target="_blank" rel="noreferrer">
-                      <Download className="mr-1.5 h-3.5 w-3.5" /> Baixar Material
-                    </a>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-full text-xs shrink-0 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                    onClick={() => setIsMaterialOpen(true)}
+                  >
+                    <FileText className="mr-1.5 h-3.5 w-3.5" /> Visualizar Material
                   </Button>
                 </div>
               </div>
@@ -645,6 +661,59 @@ function CourseDetailPage() {
             void loadAll();
           }}
         />
+      )}
+
+      {/* Visualizador de Material em Tela Cheia */}
+      {isMaterialOpen && materialUrl && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm animate-fade-in">
+          {/* Header do Visualizador */}
+          <div className="flex items-center justify-between border-b border-white/10 bg-black/50 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Material de Apoio</h3>
+                <p className="text-xs text-white/50">{course.title}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Button asChild variant="default" className="rounded-full shadow-gold bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:flex">
+                <a href={materialUrl} target="_blank" rel="noreferrer" download>
+                  <Download className="mr-2 h-4 w-4" /> Baixar Arquivo
+                </a>
+              </Button>
+              <Button asChild variant="default" size="icon" className="rounded-full shadow-gold bg-primary text-primary-foreground hover:bg-primary/90 sm:hidden">
+                <a href={materialUrl} target="_blank" rel="noreferrer" download title="Baixar Arquivo">
+                  <Download className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+                onClick={() => setIsMaterialOpen(false)}
+                title="Fechar visualizador"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Área do Iframe */}
+          <div className="flex-1 w-full h-full overflow-hidden p-2 sm:p-4">
+            <div className="w-full h-full rounded-xl overflow-hidden bg-white/5 border border-white/10">
+              <iframe 
+                src={`${materialUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                className="w-full h-full"
+                title="Material de Apoio"
+                frameBorder="0"
+                style={{ backgroundColor: 'transparent' }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

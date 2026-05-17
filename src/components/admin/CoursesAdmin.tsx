@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Pencil, Trash2, Eye, EyeOff, Plus, GraduationCap, Loader2, Layers, Upload, FileText } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff, Plus, GraduationCap, Loader2, Layers, Upload, FileText, Image as ImageIcon } from "lucide-react";
 import { ModulesManager } from "@/components/admin/ModulesManager";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -69,16 +69,19 @@ export function CoursesAdmin({
   updateCourse,
   deleteCourse,
   toggleCoursePublished,
+  saveBanner,
 }: {
   createCourse: (args: { data: any }) => Promise<any>;
   updateCourse: (args: { data: { id: string; payload: any } }) => Promise<any>;
   deleteCourse: (args: { data: string }) => Promise<any>;
   toggleCoursePublished: (args: { data: { id: string; is_published: boolean } }) => Promise<any>;
+  saveBanner?: (args: { data: any }) => Promise<any>;
 }) {
   const [items, setItems] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Course | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editingBanner, setEditingBanner] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [modulesFor, setModulesFor] = useState<Course | null>(null);
 
@@ -126,9 +129,14 @@ export function CoursesAdmin({
         title="Cursos"
         description="Editar, excluir, adicionar e ocultar cursos da plataforma."
         actions={
-          <Button className="rounded-full" onClick={() => setCreating(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Novo curso
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setEditingBanner(true)}>
+              <ImageIcon className="mr-2 h-4 w-4" /> Editar banner
+            </Button>
+            <Button className="rounded-full" onClick={() => setCreating(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Novo curso
+            </Button>
+          </div>
         }
       />
 
@@ -235,6 +243,12 @@ export function CoursesAdmin({
         courseId={modulesFor?.id ?? null}
         courseTitle={modulesFor?.title ?? ""}
         onClose={() => setModulesFor(null)}
+      />
+
+      <BannerDialog 
+        open={editingBanner}
+        onClose={() => setEditingBanner(false)}
+        saveBanner={saveBanner}
       />
     </div>
   );
@@ -574,5 +588,222 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
       {children}
     </div>
+  );
+}
+
+function BannerDialog({
+  open,
+  onClose,
+  saveBanner,
+}: {
+  open: boolean;
+  onClose: () => void;
+  saveBanner?: (args: { data: any }) => Promise<any>;
+}) {
+  const [form, setForm] = useState({
+    title: "",
+    subtitle: "",
+    description: "",
+    button_text: "",
+    button_link: "",
+    image_url: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      load();
+    }
+  }, [open]);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "courses_banner")
+      .single();
+
+    if (data?.value) {
+      try {
+        const parsed = JSON.parse(data.value);
+        setForm({
+          title: parsed.title || "",
+          subtitle: parsed.subtitle || "",
+          description: parsed.description || "",
+          button_text: parsed.button_text || "",
+          button_link: parsed.button_link || "",
+          image_url: parsed.image_url || "",
+        });
+      } catch (e) {
+        console.error("Failed to parse banner settings", e);
+      }
+    } else {
+      setForm({
+        title: "",
+        subtitle: "",
+        description: "",
+        button_text: "",
+        button_link: "",
+        image_url: "",
+      });
+    }
+    setLoading(false);
+  };
+
+  const handleUploadImage = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const rand = Math.random().toString(36).substring(2, 15);
+    const path = `landing/banner-${rand}.${ext}`;
+    
+    const { error } = await supabase.storage
+      .from("landing")
+      .upload(path, file, { upsert: false });
+
+    if (error) {
+      setUploading(false);
+      toast.error("Erro no upload: " + error.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from("landing").getPublicUrl(path);
+    setForm(f => ({ ...f, image_url: data.publicUrl }));
+    setUploading(false);
+    toast.success("Imagem de banner carregada!");
+  };
+
+  const save = async () => {
+    if (!saveBanner) return;
+    setSaving(true);
+    try {
+      await saveBanner({ data: form });
+      toast.success("Banner atualizado com sucesso!");
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar banner");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Editar Banner de Cursos</DialogTitle>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground block mb-2">Imagem de Fundo *</Label>
+              <div className="flex flex-col gap-4">
+                {form.image_url ? (
+                  <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-border/60 bg-muted">
+                    <img src={form.image_url} alt="Capa do banner" className="h-full w-full object-cover" />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="sm" 
+                      className="absolute right-2 top-2 rounded-full h-8 px-3"
+                      onClick={() => setForm(f => ({ ...f, image_url: "" }))}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => fileRef.current?.click()}
+                    className="flex aspect-[21/9] w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 hover:border-primary/50 transition-colors bg-muted/20"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <span className="text-xs text-muted-foreground">Clique para enviar imagem (formato paisagem)</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadImage(f);
+                  }}
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Deixe os campos de texto abaixo em branco para ocultá-los e exibir apenas a imagem no banner.
+            </p>
+
+            <Field label="Título">
+              <Input 
+                value={form.title} 
+                onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} 
+                placeholder="Ex: FORBIN MultiEmpresas"
+              />
+            </Field>
+
+            <Field label="Legenda Superior">
+              <Input 
+                value={form.subtitle} 
+                onChange={(e) => setForm(f => ({ ...f, subtitle: e.target.value }))} 
+                placeholder="Ex: Área de Membros"
+              />
+            </Field>
+
+            <Field label="Descrição">
+              <Textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Ex: Capacite-se com os melhores cursos..."
+              />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Texto do Botão">
+                <Input 
+                  value={form.button_text} 
+                  onChange={(e) => setForm(f => ({ ...f, button_text: e.target.value }))} 
+                  placeholder="Ex: Começar agora"
+                />
+              </Field>
+
+              <Field label="Link do Botão">
+                <Input 
+                  value={form.button_link} 
+                  onChange={(e) => setForm(f => ({ ...f, button_link: e.target.value }))} 
+                  placeholder="Ex: /cursos/ID-DO-CURSO"
+                />
+              </Field>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={saving || uploading}>Cancelar</Button>
+          <Button onClick={save} disabled={saving || uploading || loading}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar Banner
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

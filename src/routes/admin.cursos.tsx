@@ -49,6 +49,20 @@ const toggleCoursePublishedServer = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+const saveBannerServer = createServerFn({ method: "POST" })
+  .handler(async ({ data: payload }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("site_settings")
+      .upsert({ 
+        key: "courses_banner", 
+        value: JSON.stringify(payload), 
+        updated_at: new Date().toISOString() 
+      });
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
 export const Route = createFileRoute("/admin/cursos")({
   component: () => (
     <CoursesAdmin
@@ -56,6 +70,7 @@ export const Route = createFileRoute("/admin/cursos")({
       updateCourse={updateCourseServer}
       deleteCourse={deleteCourseServer}
       toggleCoursePublished={toggleCoursePublishedServer}
+      saveBanner={saveBannerServer}
     />
   ),
 });
