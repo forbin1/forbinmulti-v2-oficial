@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -86,25 +86,48 @@ function JobDetail() {
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
   const gate = useAuthGate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const navigate = useNavigate();
 
   const handleApply = async () => {
     try {
-      if (user) {
-        const companyUserId = (job as any).companyUserId;
-        if (companyUserId) {
-          const { error } = await supabase
-            .from("applications")
-            .insert({
-              job_id: job.id,
-              professional_id: user.id,
-              company_id: companyUserId,
-              status: "novo"
-            });
+      if (!user) {
+        toast.error("Você precisa estar logado para se candidatar.");
+        return;
+      }
 
-          if (error && error.code !== "23505") { // Ignore unique constraint duplicate candidate
-            throw error;
+      if (role !== "professional") {
+        toast.error("Apenas profissionais de segurança podem se candidatar às vagas!", {
+          description: "Empresas e administradores não possuem currículos profissionais ativos."
+        });
+        return;
+      }
+
+      const hasActivePlan = user.user_metadata?.plan_active !== false;
+      if (!hasActivePlan) {
+        toast.error("Plano inativo!", {
+          description: "Você precisa ter um plano ativo para se candidatar. Acesse a página de planos.",
+          action: {
+            label: "Ver planos",
+            onClick: () => navigate({ to: "/planos" })
           }
+        });
+        return;
+      }
+
+      const companyUserId = (job as any).companyUserId;
+      if (companyUserId) {
+        const { error } = await supabase
+          .from("applications")
+          .insert({
+            job_id: job.id,
+            professional_id: user.id,
+            company_id: companyUserId,
+            status: "novo"
+          });
+
+        if (error && error.code !== "23505") { // Ignore unique constraint duplicate candidate
+          throw error;
         }
       }
       setApplied(true);

@@ -133,6 +133,14 @@ function PerfilEmpresa() {
     toast.success("Publicação enviada com sucesso!");
   };
 
+  const handleShare = () => {
+    const profileUrl = `${window.location.origin}/perfil-empresa`;
+    navigator.clipboard.writeText(profileUrl);
+    toast.success("Link do perfil copiado!", {
+      description: "O link de divulgação do perfil da sua empresa foi copiado."
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -165,8 +173,8 @@ function PerfilEmpresa() {
       <div className="relative rounded-3xl border border-border/60 bg-card/85 p-6 shadow-elevated backdrop-blur-xl sm:p-8">
         <div className="flex flex-wrap items-start gap-6">
           <div className="relative">
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-gold sm:h-32 sm:w-32">
-              {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-gold sm:h-32 sm:w-32">
+              {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover rounded-full" /> : name.charAt(0).toUpperCase()}
             </div>
             <button onClick={() => avatarInput.current?.click()} className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow hover:bg-primary/90">
               <Camera className="h-4 w-4" />
@@ -197,7 +205,7 @@ function PerfilEmpresa() {
                 <Plus className="mr-2 h-4 w-4" /> Nova vaga
               </Link>
             </Button>
-            <Button variant="outline" size="icon" className="h-11 w-11 rounded-full">
+            <Button variant="outline" size="icon" onClick={handleShare} className="h-11 w-11 rounded-full">
               <Share2 className="h-4 w-4" />
             </Button>
           </div>
@@ -306,8 +314,8 @@ function PerfilEmpresa() {
             {posts.map((p) => (
               <div key={p.id} className="rounded-2xl border border-border/60 bg-card p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-gold text-sm font-bold text-primary-foreground">
-                    {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover rounded-xl" /> : name.charAt(0).toUpperCase()}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-gold text-sm font-bold text-primary-foreground overflow-hidden">
+                    {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover rounded-full" /> : name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm">{name}</h4>
