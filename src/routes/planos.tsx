@@ -297,7 +297,7 @@ function AnnualProfCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: 
           <span className="text-2xl font-bold text-foreground pb-0.5">12x</span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
+          ou no PIX <span className="font-bold text-foreground">R$ 247,90</span> à vista
         </p>
       </div>
 
@@ -337,8 +337,8 @@ function AnnualEmpresaCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaT
       <div className="mt-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">No cartão</p>
         <div className="flex items-end gap-2">
-          <span className="font-display text-5xl font-black text-primary leading-none">
-            R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          <span className="font-display text-5xl font-black text-primary leading-none whitespace-nowrap">
+            R${installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
           <span className="text-2xl font-bold text-foreground pb-0.5">12x</span>
         </div>
