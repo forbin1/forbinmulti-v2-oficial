@@ -24,6 +24,8 @@ import { MentionText } from "@/components/MentionText";
 import { toast } from "sonner";
 import { usePosts, createPost, deletePost } from "@/hooks/use-posts";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/hooks/use-subscription";
+import { FeatureGate } from "@/components/SubscriptionGuard";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -495,7 +497,8 @@ export function ComposeBox() {
   };
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
+    <FeatureGate feature="publicar experiências">
+      <div className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground sm:h-12 sm:w-12">
           {avatarUrl ? (
@@ -535,7 +538,8 @@ export function ComposeBox() {
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar"}
         </Button>
       </div>
-    </div>
+      </div>
+    </FeatureGate>
   );
 }
 
@@ -653,14 +657,18 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
       )}
       {post.image_url && <img src={post.image_url} alt="" className="mt-4 w-full rounded-xl border border-border/60 object-cover" />}
       {post.video_url && <video src={post.video_url} controls playsInline className="mt-4 w-full rounded-xl border border-border/60 bg-black" />}
-      <footer className="mt-5 flex items-center gap-2 border-t border-border/60 pt-4 text-sm text-muted-foreground">
-        <Button variant="ghost" size="sm" onClick={toggleLike} className={`rounded-full ${liked ? "text-primary" : ""}`}>
-          <Heart className={`mr-2 h-4 w-4 ${liked ? "fill-primary" : ""}`} /> {likes_count}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => setShowComments((s) => !s)} className="rounded-full">
-          <MessageCircle className="mr-2 h-4 w-4" /> {totalComments}
-        </Button>
-      </footer>
+      
+      <FeatureGate feature="interagir no feed">
+        <footer className="mt-5 flex items-center gap-2 border-t border-border/60 pt-4 text-sm text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={toggleLike} className={`rounded-full ${liked ? "text-primary" : ""}`}>
+            <Heart className={`mr-2 h-4 w-4 ${liked ? "fill-primary" : ""}`} /> {likes_count}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowComments((s) => !s)} className="rounded-full">
+            <MessageCircle className="mr-2 h-4 w-4" /> {totalComments}
+          </Button>
+        </footer>
+      </FeatureGate>
+
       {showComments && (
         <div className="mt-4 space-y-3 border-t border-border/60 pt-4">
           {comments.map((c) => (
