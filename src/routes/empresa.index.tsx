@@ -200,8 +200,13 @@ function EmpresaDashboard() {
           <div className="space-y-3">
             {jobs.map((j) => (
               <div key={j.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/60 bg-card p-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary font-bold">
-                  {company?.company_name?.charAt(0) || "E"}
+                {/* Banner thumbnail or letter fallback */}
+                <div className="h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-primary/15 flex items-center justify-center font-bold text-primary">
+                  {j.banner_url ? (
+                    <img src={j.banner_url} alt={j.title} className="h-full w-full object-cover" />
+                  ) : (
+                    company?.company_name?.charAt(0) || "E"
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{j.title}</p>
@@ -210,10 +215,36 @@ function EmpresaDashboard() {
                   </p>
                 </div>
                 <Badge className="rounded-full bg-primary/15 text-primary">0 candidatos</Badge>
-                <Badge className="rounded-full border-success/40 bg-success/15 text-success">
+                <Badge className={`rounded-full ${j.is_published ? "border-success/40 bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
                   {j.is_published ? "Ativa" : "Pausada"}
                 </Badge>
-                <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title={j.is_published ? "Pausar" : "Ativar"}
+                    onClick={async () => {
+                      const { error } = await supabase.from("jobs").update({ is_published: !j.is_published }).eq("id", j.id);
+                      if (error) toast.error(error.message);
+                      else { toast.success(j.is_published ? "Vaga pausada" : "Vaga ativada"); loadData(); }
+                    }}
+                  >
+                    {j.is_published ? <X className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Excluir"
+                    onClick={async () => {
+                      if (!confirm("Excluir esta vaga?")) return;
+                      const { error } = await supabase.from("jobs").delete().eq("id", j.id);
+                      if (error) toast.error(error.message);
+                      else { toast.success("Vaga excluída"); loadData(); }
+                    }}
+                  >
+                    <MoreVertical className="h-5 w-5 text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -278,9 +309,9 @@ function EmpresaDashboard() {
                 <Textarea value={benefits} onChange={(e) => setBenefits(e.target.value)} rows={2} placeholder="Ex: Vale refeição, vale transporte, plano de saúde..." className="bg-surface" />
               </div>
               <div className="sm:col-span-2 space-y-2">
-                <Label>Imagem / Banner da Vaga (URL)</Label>
+                <Label>Imagem / Banner da Vaga</Label>
                 <div className="flex gap-2">
-                  <Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="Link de uma imagem (ex: Unsplash) ou selecione um arquivo..." className="bg-surface flex-1" />
+                  <Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="Cole o link de uma imagem (Unsplash, etc.)" className="bg-surface flex-1" />
                   <Button type="button" variant="outline" onClick={() => {
                     const randoms = [
                       "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600",
@@ -293,12 +324,14 @@ function EmpresaDashboard() {
                 </div>
                 <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 p-4 bg-surface/50">
                   <Input type="file" accept="image/*" className="hidden" id="job-banner-upload" onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      const file = e.target.files[0];
-                      const localUrl = URL.createObjectURL(file);
-                      setBannerUrl(localUrl);
-                      toast.success("Foto selecionada! O link temporário foi gerado.");
-                    }
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      setBannerUrl(reader.result as string);
+                      toast.success("Imagem carregada com sucesso!");
+                    };
+                    reader.readAsDataURL(file);
                   }} />
                   <Label htmlFor="job-banner-upload" className="flex h-20 w-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
                     Selecionar Foto

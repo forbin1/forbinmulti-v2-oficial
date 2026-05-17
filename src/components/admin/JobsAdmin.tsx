@@ -42,6 +42,7 @@ type Job = {
   requirements: string | null;
   benefits: string | null;
   is_published: boolean;
+  banner_url: string | null;
 };
 
 const EMPTY: Omit<Job, "id"> = {
@@ -56,6 +57,7 @@ const EMPTY: Omit<Job, "id"> = {
   requirements: "",
   benefits: "",
   is_published: true,
+  banner_url: null,
 };
 
 export function JobsAdmin() {
@@ -246,6 +248,7 @@ function JobDialog({
       state: form.state || null,
       requirements: form.requirements || null,
       benefits: form.benefits || null,
+      banner_url: form.banner_url || null,
       salary_min: form.salary_min ? Number(form.salary_min) : null,
       salary_max: form.salary_max ? Number(form.salary_max) : null,
     };
@@ -315,6 +318,17 @@ function JobDialog({
           </Field>
           <Field label="Benefícios">
             <Textarea rows={3} value={form.benefits ?? ""} onChange={(e) => set("benefits", e.target.value)} placeholder="Um por linha" />
+          </Field>
+
+          <Field label="Banner da Vaga (URL de imagem)">
+            <Input
+              value={form.banner_url ?? ""}
+              onChange={(e) => set("banner_url", e.target.value || null)}
+              placeholder="https://... ou deixe em branco"
+            />
+            {form.banner_url && (
+              <img src={form.banner_url} alt="Preview" className="mt-2 h-24 w-full rounded-xl object-cover" />
+            )}
           </Field>
 
           <label className="flex items-center gap-2 text-sm">
