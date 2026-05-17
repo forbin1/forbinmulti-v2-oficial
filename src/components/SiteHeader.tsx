@@ -161,9 +161,39 @@ export function SiteHeader() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [dbJobs, setDbJobs] = useState<any[]>([]);
+  const [dbCourses, setDbCourses] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadSearchData() {
+      const [{ data: jobsData }, { data: coursesData }] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("id, title, city, state, companies(company_name)")
+          .eq("is_published", true),
+        supabase
+          .from("courses")
+          .select("id, title")
+          .eq("is_published", true)
+      ]);
+      if (jobsData) setDbJobs(jobsData);
+      if (coursesData) setDbCourses(coursesData);
+    }
+    loadSearchData();
+  }, []);
   
-  const filteredJobs = searchQuery.trim() ? JOBS.filter(job => job.title.toLowerCase().includes(searchQuery.toLowerCase()) || job.company.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3) : [];
-  const filteredCourses = searchQuery.trim() ? COURSES.filter(course => course.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3) : [];
+  const filteredJobs = searchQuery.trim() 
+    ? dbJobs.filter(job => 
+        job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        job.companies?.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 3) 
+    : [];
+
+  const filteredCourses = searchQuery.trim() 
+    ? dbCourses.filter(course => 
+        course.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 3) 
+    : [];
 
   const handleSignOut = async () => {
     await signOut();
@@ -231,17 +261,22 @@ export function SiteHeader() {
                   <div className="mb-4">
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">Vagas</h3>
                     <ul className="space-y-2">
-                      {filteredJobs.map(job => (
-                        <li key={job.id}>
-                          <Link to="/vagas/$jobId" params={{ jobId: job.id }} className="block rounded-lg p-2 hover:bg-accent transition" onClick={() => setShowSearch(false)}>
-                            <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
-                            <p className="mt-1 text-xs text-muted-foreground truncate flex items-center gap-2">
-                              <span className="flex items-center gap-1"><Briefcase className="h-3 w-3"/> {job.companyInitials}</span>
-                              <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/> {job.location}</span>
-                            </p>
-                          </Link>
-                        </li>
-                      ))}
+                      {filteredJobs.map(job => {
+                        const companyName = job.companies?.company_name || "Confidencial";
+                        const initials = companyName.substring(0, 2).toUpperCase();
+                        const location = job.city && job.state ? `${job.city}, ${job.state}` : "Remoto";
+                        return (
+                          <li key={job.id}>
+                            <Link to="/vagas/$jobId" params={{ jobId: job.id }} className="block rounded-lg p-2 hover:bg-accent transition" onClick={() => setShowSearch(false)}>
+                              <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
+                              <p className="mt-1 text-xs text-muted-foreground truncate flex items-center gap-2">
+                                <span className="flex items-center gap-1"><Briefcase className="h-3 w-3"/> {initials}</span>
+                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/> {location}</span>
+                              </p>
+                            </Link>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
@@ -249,13 +284,13 @@ export function SiteHeader() {
                   <div>
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">Cursos</h3>
                     <ul className="space-y-2">
-                      {filteredCourses.map((course, i) => (
-                        <li key={i}>
-                          <Link to="/cursos" className="flex items-center gap-3 rounded-lg p-2 hover:bg-accent transition" onClick={() => setShowSearch(false)}>
+                      {filteredCourses.map((course) => (
+                        <li key={course.id}>
+                          <Link to="/cursos/$courseId" params={{ courseId: course.id }} className="flex items-center gap-3 rounded-lg p-2 hover:bg-accent transition" onClick={() => setShowSearch(false)}>
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                                <BookOpen className="h-4 w-4" />
                             </div>
-                            <p className="text-sm font-medium text-foreground truncate">{course}</p>
+                            <p className="text-sm font-medium text-foreground truncate">{course.title}</p>
                           </Link>
                         </li>
                       ))}
