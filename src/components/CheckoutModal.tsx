@@ -5,15 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  CreditCard, QrCode, Check, Loader2, Copy, CheckCircle2, ArrowLeft, Smartphone
+  CreditCard, QrCode, Check, Loader2, Copy, CheckCircle2,
+  ArrowLeft, Smartphone, Mail, Lock, Eye, EyeOff, User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { activateSubscription } from "@/hooks/use-subscription";
+import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "@tanstack/react-router";
 
-type CheckoutPlan = {
+export type CheckoutPlan = {
   name: string;
-  installmentLabel: string;  // "R$27,90 12x" or "R$297,90/mês"
-  pixLabel: string;          // "R$247,90 à vista" or "R$297,90"
+  installmentLabel: string;
+  pixLabel: string;
   period: string;
+  audience: "professional" | "company";
+  periodRaw: "month" | "year";
+  slug: string;
 };
 
 type Props = {
@@ -22,12 +30,14 @@ type Props = {
   plan: CheckoutPlan;
 };
 
-type Step = "method" | "pix" | "card" | "processing" | "success";
+type Step = "method" | "pix" | "card" | "processing" | "register" | "success";
 
 const FAKE_PIX_KEY = "00020126580014BR.GOV.BCB.PIX013636f14b5e-9f7b-4c13-88d9-3e7a6d2f01995204000053039865802BR5914FORBIN PLATAFOR6009SAO PAULO62070503***63047B2D";
 const FAKE_QR = "https://api.qrserver.com/v1/create-qr-code/?data=FORBIN_PAGAMENTO_SIMULADO&size=180x180&bgcolor=0a0a0a&color=F5C518&margin=8";
 
 export function CheckoutModal({ open, onOpenChange, plan }: Props) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
   const [copied, setCopied] = useState(false);
 
@@ -37,42 +47,85 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
 
+  // Register form
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [registering, setRegistering] = useState(false);
+
+  const role = plan.audience === "professional" ? "professional" : "company";
+
   const reset = () => {
     setStep("method");
     setCopied(false);
-    setCardNumber("");
-    setCardName("");
-    setCardExpiry("");
-    setCardCvv("");
+    setCardNumber(""); setCardName(""); setCardExpiry(""); setCardCvv("");
+    setEmail(""); setPassword(""); setConfirmPassword("");
+    setRegistering(false);
   };
 
-  const handleClose = (v: boolean) => {
-    if (!v) reset();
-    onOpenChange(v);
-  };
+  const handleClose = (v: boolean) => { if (!v) reset(); onOpenChange(v); };
 
-  const simulateProcessing = () => {
+  // ── After payment succeeds: activate or go to register ──
+  const handlePaymentSuccess = () => {
     setStep("processing");
-    setTimeout(() => setStep("success"), 2200);
+    setTimeout(async () => {
+      if (user) {
+        // Already logged in — just activate subscription
+        const err = await activateSubscription(user.id, role, plan.periodRaw, plan.slug);
+        if (err) { toast.error("Erro ao ativar plano: " + err.message); setStep("card"); }
+        else setStep("success");
+      } else {
+        // Not logged in → need to register first
+        setStep("register");
+      }
+    }, 2200);
   };
 
   const handleCopyPix = () => {
     navigator.clipboard.writeText(FAKE_PIX_KEY).catch(() => {});
     setCopied(true);
     toast.success("Código PIX copiado!");
-    setTimeout(() => simulateProcessing(), 1500);
+    setTimeout(() => handlePaymentSuccess(), 1500);
+  };
+
+  // ── Register after payment ──
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) { toast.error("As senhas não coincidem!"); return; }
+    if (password.length < 6) { toast.error("A senha precisa ter ao menos 6 caracteres."); return; }
+    setRegistering(true);
+    try {
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { role } },
+      });
+      if (signUpErr) throw signUpErr;
+      const userId = signUpData.user?.id;
+      if (!userId) throw new Error("Erro ao criar usuário.");
+      const subErr = await activateSubscription(userId, role, plan.periodRaw, plan.slug);
+      if (subErr) throw subErr;
+      setStep("success");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar conta.");
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const formatCard = (v: string) =>
     v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
   const formatExpiry = (v: string) =>
     v.replace(/\D/g, "").slice(0, 4).replace(/(\d{2})(\d)/, "$1/$2");
-
   const cardValid =
     cardNumber.replace(/\s/g, "").length === 16 &&
     cardName.trim().length > 2 &&
     cardExpiry.length === 5 &&
     cardCvv.length >= 3;
+
+  const roleLabel = role === "professional" ? "Profissional" : "Empresa";
+  const dashboardPath = role === "professional" ? "/perfil" : "/empresa";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -81,7 +134,7 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
         {/* ── Header ── */}
         {step !== "success" && (
           <div className="flex items-center justify-between border-b border-border/40 px-6 py-4">
-            {step !== "method" && step !== "processing" ? (
+            {(step === "pix" || step === "card") ? (
               <button onClick={() => setStep("method")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition">
                 <ArrowLeft className="h-4 w-4" /> Voltar
               </button>
@@ -91,8 +144,8 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
           </div>
         )}
 
-        {/* ── Plan Summary ── */}
-        {step !== "success" && (
+        {/* ── Plan Summary (hide on register/success) ── */}
+        {step !== "success" && step !== "register" && (
           <div className="mx-6 mt-5 rounded-2xl border border-primary/30 bg-primary/8 px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Você está assinando</p>
             <div className="flex items-center justify-between">
@@ -103,11 +156,10 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
           </div>
         )}
 
-        {/* ═══════════════ STEP: METHOD ═══════════════ */}
+        {/* ═══ METHOD ═══ */}
         {step === "method" && (
           <div className="p-6 space-y-3">
             <p className="text-sm font-semibold text-muted-foreground mb-4">Escolha a forma de pagamento</p>
-
             <button
               onClick={() => setStep("pix")}
               className="w-full flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition hover:border-primary/50 hover:bg-primary/5 group"
@@ -121,7 +173,6 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
               </div>
               <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground group-hover:text-primary transition" />
             </button>
-
             <button
               onClick={() => setStep("card")}
               className="w-full flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition hover:border-primary/50 hover:bg-primary/5 group"
@@ -135,14 +186,11 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
               </div>
               <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground group-hover:text-primary transition" />
             </button>
-
-            <p className="text-center text-xs text-muted-foreground pt-2">
-              🔒 Ambiente seguro · Dados protegidos
-            </p>
+            <p className="text-center text-xs text-muted-foreground pt-2">🔒 Ambiente seguro · Dados protegidos</p>
           </div>
         )}
 
-        {/* ═══════════════ STEP: PIX ═══════════════ */}
+        {/* ═══ PIX ═══ */}
         {step === "pix" && (
           <div className="p-6 flex flex-col items-center gap-4">
             <div className="relative">
@@ -151,37 +199,27 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
               </div>
               <Smartphone className="absolute -bottom-3 -right-3 h-8 w-8 text-primary bg-[#0a0a0a] rounded-full p-1 border border-primary/30" />
             </div>
-
             <div className="w-full text-center">
               <p className="text-sm font-semibold">Escaneie o QR Code ou copie o código</p>
               <p className="text-xs text-muted-foreground mt-1">Abra o app do seu banco e pague via PIX</p>
             </div>
-
             <button
               onClick={handleCopyPix}
               className="w-full flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-surface px-4 py-3 text-xs text-muted-foreground hover:border-primary/40 transition"
             >
               <span className="truncate font-mono">{FAKE_PIX_KEY.slice(0, 48)}...</span>
-              {copied
-                ? <Check className="h-4 w-4 text-success shrink-0" />
-                : <Copy className="h-4 w-4 shrink-0 text-primary" />
-              }
+              {copied ? <Check className="h-4 w-4 text-success shrink-0" /> : <Copy className="h-4 w-4 shrink-0 text-primary" />}
             </button>
-
-            <Button
-              onClick={handleCopyPix}
-              className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold"
-            >
+            <Button onClick={handleCopyPix} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold">
               {copied ? <><Check className="mr-2 h-4 w-4" /> Código copiado!</> : <><Copy className="mr-2 h-4 w-4" /> Copiar código PIX</>}
             </Button>
-            <p className="text-xs text-muted-foreground text-center">Após confirmar o pagamento, sua assinatura será ativada automaticamente.</p>
+            <p className="text-xs text-muted-foreground text-center">Após confirmar o pagamento, sua conta será criada automaticamente.</p>
           </div>
         )}
 
-        {/* ═══════════════ STEP: CARD ═══════════════ */}
+        {/* ═══ CARD ═══ */}
         {step === "card" && (
           <div className="p-6 space-y-4">
-            {/* Card Preview */}
             <div className="relative h-36 w-full rounded-2xl bg-gradient-to-br from-primary/30 via-primary/10 to-transparent border border-primary/30 p-5 overflow-hidden">
               <div className="absolute right-4 top-4 flex gap-1">
                 <div className="h-5 w-5 rounded-full bg-primary/60" />
@@ -195,64 +233,34 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
                 <p className="text-xs text-muted-foreground font-mono">{cardExpiry || "MM/AA"}</p>
               </div>
             </div>
-
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Número do cartão</Label>
-                <Input
-                  value={cardNumber}
-                  onChange={e => setCardNumber(formatCard(e.target.value))}
-                  placeholder="0000 0000 0000 0000"
-                  className="bg-surface font-mono"
-                  maxLength={19}
-                />
+                <Input value={cardNumber} onChange={e => setCardNumber(formatCard(e.target.value))} placeholder="0000 0000 0000 0000" className="bg-surface font-mono" maxLength={19} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Nome no cartão</Label>
-                <Input
-                  value={cardName}
-                  onChange={e => setCardName(e.target.value.toUpperCase())}
-                  placeholder="COMO ESCRITO NO CARTÃO"
-                  className="bg-surface uppercase"
-                />
+                <Input value={cardName} onChange={e => setCardName(e.target.value.toUpperCase())} placeholder="COMO ESCRITO NO CARTÃO" className="bg-surface uppercase" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Validade</Label>
-                  <Input
-                    value={cardExpiry}
-                    onChange={e => setCardExpiry(formatExpiry(e.target.value))}
-                    placeholder="MM/AA"
-                    className="bg-surface font-mono"
-                    maxLength={5}
-                  />
+                  <Input value={cardExpiry} onChange={e => setCardExpiry(formatExpiry(e.target.value))} placeholder="MM/AA" className="bg-surface font-mono" maxLength={5} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">CVV</Label>
-                  <Input
-                    value={cardCvv}
-                    onChange={e => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    placeholder="•••"
-                    type="password"
-                    className="bg-surface font-mono"
-                    maxLength={4}
-                  />
+                  <Input value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="•••" type="password" className="bg-surface font-mono" maxLength={4} />
                 </div>
               </div>
             </div>
-
-            <Button
-              disabled={!cardValid}
-              onClick={simulateProcessing}
-              className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold disabled:opacity-40"
-            >
+            <Button disabled={!cardValid} onClick={handlePaymentSuccess} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold disabled:opacity-40">
               <CreditCard className="mr-2 h-4 w-4" /> Pagar {plan.installmentLabel}
             </Button>
             <p className="text-center text-xs text-muted-foreground">🔒 Seus dados estão protegidos</p>
           </div>
         )}
 
-        {/* ═══════════════ STEP: PROCESSING ═══════════════ */}
+        {/* ═══ PROCESSING ═══ */}
         {step === "processing" && (
           <div className="flex flex-col items-center justify-center gap-4 py-14 px-6">
             <div className="relative flex h-20 w-20 items-center justify-center">
@@ -264,7 +272,69 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
           </div>
         )}
 
-        {/* ═══════════════ STEP: SUCCESS ═══════════════ */}
+        {/* ═══ REGISTER (after payment, not logged in) ═══ */}
+        {step === "register" && (
+          <form onSubmit={handleRegister} className="p-6 space-y-4">
+            <div className="text-center mb-2">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/15 border border-success/30">
+                <CheckCircle2 className="h-7 w-7 text-success" />
+              </div>
+              <p className="font-display text-xl font-bold">Pagamento confirmado!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Agora crie sua conta <span className="text-primary font-semibold">{roleLabel}</span> para acessar a plataforma.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">E-mail</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="seu@email.com" className="bg-surface pl-10" required />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  type={showPwd ? "text" : "password"}
+                  placeholder="Mínimo 6 caracteres"
+                  className="bg-surface pl-10 pr-10"
+                  required
+                />
+                <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Confirmar senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  type={showPwd ? "text" : "password"}
+                  placeholder="Repita a senha"
+                  className="bg-surface pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button type="submit" disabled={registering} className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold disabled:opacity-60">
+              {registering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4" />}
+              {registering ? "Criando conta..." : "Criar minha conta"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">Já tem conta? <a href="/entrar" className="text-primary underline">Entrar</a></p>
+          </form>
+        )}
+
+        {/* ═══ SUCCESS ═══ */}
         {step === "success" && (
           <div className="flex flex-col items-center gap-5 py-10 px-8 text-center">
             <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-success/15 border-2 border-success/40">
@@ -272,33 +342,24 @@ export function CheckoutModal({ open, onOpenChange, plan }: Props) {
               <div className="absolute inset-0 animate-ping rounded-full bg-success/10" style={{ animationDuration: "2s" }} />
             </div>
             <div>
-              <p className="font-display text-2xl font-bold">Pagamento confirmado!</p>
+              <p className="font-display text-2xl font-bold">Bem-vindo à Forbin! 🎉</p>
               <p className="text-muted-foreground mt-2 text-sm">
-                Sua assinatura <strong>{plan.name}</strong> foi ativada com sucesso.
+                Sua conta <strong>{roleLabel}</strong> foi criada e o plano <strong>{plan.name}</strong> está ativo.
               </p>
             </div>
             <div className="w-full rounded-2xl border border-success/30 bg-success/8 px-5 py-4 text-left">
               <p className="text-xs font-semibold uppercase tracking-widest text-success mb-2">Resumo</p>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Plano</span>
-                <span className="font-semibold">{plan.name}</span>
-              </div>
-              <div className="flex justify-between text-sm mt-1">
-                <span className="text-muted-foreground">Status</span>
-                <span className="text-success font-semibold">✓ Ativo</span>
-              </div>
-              <div className="flex justify-between text-sm mt-1">
-                <span className="text-muted-foreground">Valor</span>
-                <span className="font-semibold">{plan.installmentLabel}</span>
-              </div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Plano</span><span className="font-semibold">{plan.name}</span></div>
+              <div className="flex justify-between text-sm mt-1"><span className="text-muted-foreground">Tipo de conta</span><span className="font-semibold">{roleLabel}</span></div>
+              <div className="flex justify-between text-sm mt-1"><span className="text-muted-foreground">Status</span><span className="text-success font-semibold">✓ Ativo</span></div>
+              <div className="flex justify-between text-sm mt-1"><span className="text-muted-foreground">Duração</span><span className="font-semibold">{plan.periodRaw === "year" ? "1 ano" : "1 mês"}</span></div>
             </div>
             <Button
-              onClick={() => handleClose(false)}
+              onClick={() => { handleClose(false); navigate({ to: dashboardPath as any }); }}
               className="w-full h-12 rounded-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-gold"
             >
-              Acessar minha conta
+              Acessar meu painel
             </Button>
-            <p className="text-xs text-muted-foreground">Um e-mail de confirmação foi enviado para você.</p>
           </div>
         )}
       </DialogContent>

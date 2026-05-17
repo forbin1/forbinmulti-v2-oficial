@@ -176,6 +176,9 @@ function PlanosPage() {
                         installmentLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})}/mês`,
                         pixLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} à vista`,
                         period: "Mensal",
+                        audience: "professional",
+                        periodRaw: "month",
+                        slug: p.slug,
                       })}
                     />
                   ))}
@@ -193,6 +196,9 @@ function PlanosPage() {
                           installmentLabel: `R$ ${(inst/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} 12x`,
                           pixLabel: "R$ 247,90 à vista",
                           period: "Anual",
+                          audience: "professional",
+                          periodRaw: "year",
+                          slug: p.slug,
                         })}
                       />
                     );
@@ -240,6 +246,9 @@ function PlanosPage() {
                         installmentLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})}/mês`,
                         pixLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} à vista`,
                         period: "Mensal",
+                        audience: "company",
+                        periodRaw: "month",
+                        slug: p.slug,
                       })}
                     />
                   ))}
@@ -255,6 +264,9 @@ function PlanosPage() {
                           installmentLabel: `R$ ${(inst/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} 12x`,
                           pixLabel: `R$ ${(p.price_cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2})} à vista`,
                           period: "Anual",
+                          audience: "company",
+                          periodRaw: "year",
+                          slug: p.slug,
                         })}
                       />
                     );

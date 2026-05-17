@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ExpiredBanner } from "@/components/SubscriptionGuard";
 
 function NotFoundComponent() {
   return (
@@ -103,6 +104,7 @@ function RootComponent() {
     <AuthProvider>
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         {!hideChrome && <SiteHeader />}
+        <ExpiredBanner />
         <main className="flex-1">
           <Outlet />
         </main>
