@@ -21,6 +21,7 @@ function EmpresaConfiguracoes() {
 
   // Company info states
   const [companyName, setCompanyName] = useState("");
+  const [username, setUsername] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
@@ -49,6 +50,7 @@ function EmpresaConfiguracoes() {
         if (data) {
           setCompanyId(data.id);
           setCompanyName(data.company_name || "");
+          setUsername(data.username || "");
           setCnpj(data.cnpj || "");
           setPhone(data.phone || "");
           setWebsite(data.website || "");
@@ -73,10 +75,12 @@ function EmpresaConfiguracoes() {
 
     try {
       setSaving(true);
+      const cleanUsername = username.toLowerCase().replace(/[^a-z0-9-_]/g, "");
       const { error } = await supabase
         .from("companies")
         .update({
           company_name: companyName,
+          username: cleanUsername,
           cnpj,
           phone,
           website,
@@ -152,6 +156,24 @@ function EmpresaConfiguracoes() {
               <div className="space-y-2">
                 <Label>Nome da Empresa *</Label>
                 <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="bg-surface" />
+              </div>
+              <div className="space-y-2">
+                <Label>Nome de Usuário (Slug do Perfil) *</Label>
+                <div className="flex rounded-xl border border-border bg-surface overflow-hidden">
+                  <span className="flex items-center px-3 bg-muted text-xs text-muted-foreground border-r border-border select-none">
+                    forbin.com/empresa/
+                  </span>
+                  <Input 
+                    value={username} 
+                    onChange={(e) => setUsername(e.target.value)} 
+                    required 
+                    className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-10 px-3" 
+                    placeholder="ex: grupolewis" 
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Seu perfil público estará em: <strong className="text-primary">/empresa/{username.toLowerCase().replace(/[^a-z0-9-_]/g, "") || "seu-usuario"}</strong>
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>CNPJ</Label>

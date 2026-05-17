@@ -79,7 +79,17 @@ function RootComponent() {
   const { pathname } = useLocation();
   const isAuthScreen = pathname === "/login";
   const isAdminArea = pathname === "/admin" || pathname.startsWith("/admin/");
-  const isEmpresaArea = pathname === "/empresa" || pathname.startsWith("/empresa/");
+  
+  // Dashboard routes under /empresa
+  const dashboardRoutes = [
+    "/empresa",
+    "/empresa/candidatos",
+    "/empresa/afiliados",
+    "/empresa/vendas",
+    "/empresa/favoritos",
+    "/empresa/configuracoes"
+  ];
+  const isEmpresaArea = dashboardRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
   const hideChrome = isAuthScreen || isAdminArea || isEmpresaArea;
 
   useEffect(() => {

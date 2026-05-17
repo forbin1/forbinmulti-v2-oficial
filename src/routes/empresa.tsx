@@ -3,9 +3,10 @@ import { Briefcase, Users, Store, DollarSign, Heart, Settings, ArrowLeft, Menu, 
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/empresa")({
   component: EmpresaLayout,
@@ -23,7 +24,22 @@ const ITEMS = [
 function EmpresaSidebarContents({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("username")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.username) {
+        setUsername(data.username);
+      }
+    })();
+  }, [user]);
 
   return (
     <div className="flex h-full flex-col bg-card border-r border-border/60">
@@ -73,7 +89,8 @@ function EmpresaSidebarContents({ onNavigate }: { onNavigate?: () => void }) {
           Voltar à plataforma
         </Link>
         <Link
-          to="/perfil-empresa"
+          to={username ? "/empresa/$username" : "/perfil-empresa"}
+          params={username ? { username } : undefined}
           className="flex w-full items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
         >
           <Building2 className="h-4 w-4" />
@@ -96,6 +113,22 @@ function EmpresaSidebarContents({ onNavigate }: { onNavigate?: () => void }) {
 
 function EmpresaLayout() {
   const [open, setOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Dashboard routes under /empresa
+  const dashboardRoutes = [
+    "/empresa",
+    "/empresa/candidatos",
+    "/empresa/afiliados",
+    "/empresa/vendas",
+    "/empresa/favoritos",
+    "/empresa/configuracoes"
+  ];
+  const isDashboard = dashboardRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
+
+  if (!isDashboard) {
+    return <Outlet />;
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background">

@@ -167,10 +167,12 @@ function PerfilEmpresa() {
   };
 
   const handleShare = () => {
-    const profileUrl = `${window.location.origin}/perfil-empresa`;
-    navigator.clipboard.writeText(profileUrl);
+    const link = company?.username 
+      ? `${window.location.origin}/empresa/${company.username}`
+      : `${window.location.origin}/perfil-empresa`;
+    navigator.clipboard.writeText(link);
     toast.success("Link do perfil copiado!", {
-      description: "O link de divulgação do perfil da sua empresa foi copiado."
+      description: `O link público de divulgação foi copiado.`
     });
   };
 
