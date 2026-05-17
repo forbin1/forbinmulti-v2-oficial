@@ -40,13 +40,33 @@ function EmpresaConfiguracoes() {
       if (!user) return;
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from("companies")
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
 
         if (error) throw error;
+
+        // Auto-heal missing company record on load
+        if (!data) {
+          const defaultName = user.user_metadata?.company_name || "Minha Empresa";
+          const { data: newComp, error: insertErr } = await supabase
+            .from("companies")
+            .insert({
+              user_id: user.id,
+              company_name: defaultName,
+              city: "Rio de Janeiro",
+              state: "RJ"
+            })
+            .select()
+            .single();
+
+          if (!insertErr && newComp) {
+            data = newComp;
+          }
+        }
+
         if (data) {
           setCompanyId(data.id);
           setCompanyName(data.company_name || "");
@@ -71,27 +91,51 @@ function EmpresaConfiguracoes() {
 
   const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyId) return;
 
     try {
       setSaving(true);
       const cleanUsername = username.toLowerCase().replace(/[^a-z0-9-_]/g, "");
-      const { error } = await supabase
-        .from("companies")
-        .update({
-          company_name: companyName,
-          username: cleanUsername,
-          cnpj,
-          phone,
-          website,
-          city,
-          state,
-          description,
-          employee_count: employeeCount ? parseInt(employeeCount) : null,
-        })
-        .eq("id", companyId);
 
-      if (error) throw error;
+      if (!companyId) {
+        const { data: newComp, error: insertErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: user.id,
+            company_name: companyName,
+            username: cleanUsername,
+            cnpj,
+            phone,
+            website,
+            city,
+            state,
+            description,
+            employee_count: employeeCount ? parseInt(employeeCount) : null,
+          })
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+        if (newComp) {
+          setCompanyId(newComp.id);
+        }
+      } else {
+        const { error } = await supabase
+          .from("companies")
+          .update({
+            company_name: companyName,
+            username: cleanUsername,
+            cnpj,
+            phone,
+            website,
+            city,
+            state,
+            description,
+            employee_count: employeeCount ? parseInt(employeeCount) : null,
+          })
+          .eq("id", companyId);
+
+        if (error) throw error;
+      }
       toast.success("Configurações atualizadas com sucesso!");
     } catch (err: any) {
       toast.error("Erro ao salvar: " + err.message);
