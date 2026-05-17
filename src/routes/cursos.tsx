@@ -39,7 +39,61 @@ type Course = {
 
 function CursosPage() {
   const rawCourses = Route.useLoaderData() as Course[];
-  const courses = rawCourses || [];
+  let courses = rawCourses || [];
+  // Fallback para mock data se o banco estiver vazio
+  if (courses.length === 0) {
+    courses = [
+      {
+        id: "mock-1",
+        title: "Formação Especial de Escolta Armada",
+        description: "Curso completo prático e teórico",
+        thumbnail_url: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1920&h=640&fit=crop",
+        instructor: "FORBIN Academy",
+        duration_hours: 40,
+        category: "Especializações",
+        price: null,
+        level: "Avançado",
+        total_lessons: 12
+      },
+      {
+        id: "mock-2",
+        title: "Táticas de Defesa Pessoal",
+        description: "Defesa e imobilização",
+        thumbnail_url: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=1920&h=640&fit=crop",
+        instructor: "FORBIN Academy",
+        duration_hours: 20,
+        category: "Especializações",
+        price: null,
+        level: "Intermediário",
+        total_lessons: 8
+      },
+      {
+        id: "mock-3",
+        title: "Liderança e Gestão de Equipes",
+        description: "Para supervisores",
+        thumbnail_url: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=1920&h=640&fit=crop",
+        instructor: "FORBIN Academy",
+        duration_hours: 15,
+        category: "Gestão",
+        price: null,
+        level: "Avançado",
+        total_lessons: 5
+      },
+      {
+        id: "mock-4",
+        title: "Operador de CFTV Inteligente",
+        description: "Monitoramento",
+        thumbnail_url: "https://images.unsplash.com/photo-1564540583246-934409427776?w=1920&h=640&fit=crop",
+        instructor: "FORBIN Academy",
+        duration_hours: 30,
+        category: "Tecnologia",
+        price: null,
+        level: "Iniciante",
+        total_lessons: 10
+      }
+    ];
+  }
+
   const categories = [...new Set(courses.map((c) => c.category))];
   const grouped = categories.map((cat) => ({
     category: cat,
@@ -47,18 +101,6 @@ function CursosPage() {
   }));
 
   const heroCourse = courses[0];
-
-  if (courses.length === 0) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <h1 className="font-display text-3xl font-bold">Nenhum curso disponível</h1>
-          <p className="mt-3 text-white/60">Em breve novos cursos serão publicados na área de membros.</p>
-          <Link to="/" className="mt-6 inline-block rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">Voltar para o início</Link>
-        </div>
-      </div>
-    );
-  }
 
 
   return (
@@ -97,17 +139,20 @@ function CursosPage() {
       )}
 
       {/* Course Sections by Category */}
-      <div className="pb-16">
+      <div className="pb-20">
         {grouped.map((g) => (
-          <section key={g.category} className="mt-10 px-4 sm:px-6 lg:px-10">
-            <div className="mb-1 flex items-center gap-2">
+          <section key={g.category} className="mt-12">
+            <div className="mb-4 px-4 sm:px-6 lg:px-10 flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-primary">●</span>
-              <h2 className="font-display text-lg font-bold sm:text-xl">{g.category}</h2>
+              <h2 className="font-display text-xl font-bold sm:text-2xl">{g.category}</h2>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {/* Horizontal Scroll Container */}
+            <div className="flex gap-4 overflow-x-auto pb-8 pt-2 px-4 sm:px-6 lg:px-10 snap-x snap-mandatory hide-scrollbar">
               {g.courses.map((course, i) => (
-                <CourseModule key={course.id} course={course} index={i} />
+                <div key={course.id} className="snap-start shrink-0 w-44 sm:w-52 lg:w-64">
+                  <CourseModule course={course} index={i} />
+                </div>
               ))}
             </div>
           </section>
