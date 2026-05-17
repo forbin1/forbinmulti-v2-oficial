@@ -23,47 +23,45 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { JOBS } from "@/data/mock";
 import { useAuthGate } from "@/components/RequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/vagas/$jobId")({
   loader: async ({ params }) => {
-    let job = JOBS.find((j) => j.id === params.jobId);
-    if (!job) {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*, companies(*)")
-        .eq("id", params.jobId)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("*, companies(*), applications(count)")
+      .eq("id", params.jobId)
+      .maybeSingle();
 
-      if (data) {
-        job = {
-          id: data.id,
-          title: data.title,
-          company: data.companies?.company_name || "Empresa FORBIN",
-          companyInitials: data.companies?.company_name?.charAt(0) || "E",
-          location: `${data.city || "Brasil"}, ${data.state || ""}`,
-          type: data.contract_type || "CLT",
-          shift: data.modality || "Presencial",
-          salary: (() => {
-            const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
-            if (data.salary_min && data.salary_max) return `${fmt(data.salary_min)} – ${fmt(data.salary_max)}`;
-            if (data.salary_min) return fmt(data.salary_min);
-            if (data.salary_max) return fmt(data.salary_max);
-            return "A combinar";
-          })(),
-          posted: "Recém criada",
-          applicants: 0,
-          description: data.description || "",
-          requirements: data.requirements ? data.requirements.split(",") : [],
-          benefits: data.benefits ? data.benefits.split(",") : [],
-          cover: data.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
-          companyUserId: data.companies?.user_id
-        } as any;
-      }
-    }
+    if (!data) throw notFound();
+
+    const job = {
+      id: data.id,
+      title: data.title,
+      company: data.companies?.company_name || "Empresa FORBIN",
+      companyInitials: data.companies?.company_name?.charAt(0) || "E",
+      location: `${data.city || "Brasil"}, ${data.state || ""}`,
+      type: data.contract_type || "CLT",
+      shift: data.modality || "Presencial",
+      salary: (() => {
+        const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+        if (data.salary_min && data.salary_max) return `${fmt(data.salary_min)} – ${fmt(data.salary_max)}`;
+        if (data.salary_min) return fmt(data.salary_min);
+        if (data.salary_max) return fmt(data.salary_max);
+        return "A combinar";
+      })(),
+      posted: "Recém criada",
+      applicants: data.applications?.[0]?.count || 0,
+      description: data.description || "",
+      requirements: data.requirements ? data.requirements.split(",") : [],
+      benefits: data.benefits ? data.benefits.split(",") : [],
+      cover: data.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
+      companyUserId: data.companies?.user_id
+    } as any;
     if (!job) throw notFound();
     return { job };
   },
@@ -93,7 +91,21 @@ function JobDetail() {
   const [saved, setSaved] = useState(false);
   const gate = useAuthGate();
   const { user, role } = useAuth();
+  const { isActive } = useSubscription();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && role === "professional") {
+      supabase.from("applications")
+        .select("id")
+        .eq("job_id", job.id)
+        .eq("professional_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setApplied(true);
+        });
+    }
+  }, [user, role, job.id]);
 
   const handleApply = async () => {
     try {
@@ -109,8 +121,7 @@ function JobDetail() {
         return;
       }
 
-      const hasActivePlan = user.user_metadata?.plan_active !== false;
-      if (!hasActivePlan) {
+      if (!isActive) {
         toast.error("Plano inativo!", {
           description: "Você precisa ter um plano ativo para se candidatar. Acesse a página de planos.",
           action: {

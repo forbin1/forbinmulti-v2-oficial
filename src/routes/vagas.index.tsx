@@ -47,7 +47,7 @@ function VagasPage() {
       try {
         const { data, error } = await supabase
           .from("jobs")
-          .select("*, companies(*)")
+          .select("*, companies(*), applications(count)")
           .eq("is_published", true)
           .order("created_at", { ascending: false });
 
@@ -71,7 +71,7 @@ function VagasPage() {
               return "A combinar";
             })(),
             posted: "Recém criada",
-            applicants: 0,
+            applicants: j.applications?.[0]?.count || 0,
             requirements: j.requirements ? j.requirements.split(",") : [],
             cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
           }));
@@ -100,7 +100,7 @@ function VagasPage() {
   const toggleSpecialty = (s: string) =>
     setSpecialties((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
-  const combinedJobs = [...realJobs, ...JOBS];
+  const combinedJobs = realJobs;
 
   const filtered = combinedJobs.filter((j) => {
     const matchRegion = region === "Todas" || j.location.includes(region);
