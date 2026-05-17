@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Upload, User, MapPin, GraduationCap, Camera, Loader2, Mail, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload, User, MapPin, GraduationCap, Camera, Loader2, Mail, Lock, Building2, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,7 @@ const STEPS = [
 
 function CadastroProfissional() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
 
@@ -102,30 +102,71 @@ function CadastroProfissional() {
       </div>
 
       {/* Stepper */}
-      <div className="mb-10 grid grid-cols-5 gap-2">
-        {STEPS.map((s) => {
-          const done = step > s.id;
-          const active = step === s.id;
-          return (
-            <div key={s.id} className="flex flex-col items-center gap-2">
-              <div
-                className={cn(
-                  "flex h-12 w-12 items-center justify-center rounded-full border-2 transition",
-                  done && "border-primary bg-primary text-primary-foreground",
-                  active && "border-primary bg-primary/15 text-primary",
-                  !done && !active && "border-border bg-card text-muted-foreground",
-                )}
-              >
-                {done ? <CheckCircle2 className="h-5 w-5" /> : <s.icon className="h-5 w-5" />}
+      {step > 0 && (
+        <div className="mb-10 grid grid-cols-5 gap-2">
+          {STEPS.map((s) => {
+            const done = step > s.id;
+            const active = step === s.id;
+            return (
+              <div key={s.id} className="flex flex-col items-center gap-2">
+                <div
+                  className={cn(
+                    "flex h-12 w-12 items-center justify-center rounded-full border-2 transition",
+                    done && "border-primary bg-primary text-primary-foreground",
+                    active && "border-primary bg-primary/15 text-primary",
+                    !done && !active && "border-border bg-card text-muted-foreground",
+                  )}
+                >
+                  {done ? <CheckCircle2 className="h-5 w-5" /> : <s.icon className="h-5 w-5" />}
+                </div>
+                <p className={cn("hidden text-center text-xs font-medium sm:block", active && "text-foreground")}>
+                  {s.title}
+                </p>
               </div>
-              <p className={cn("hidden text-center text-xs font-medium sm:block", active && "text-foreground")}>
-                {s.title}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
+      {step === 0 && (
+        <div className="rounded-3xl border border-border/60 bg-card p-8 sm:p-12 shadow-elevated text-center max-w-3xl mx-auto">
+          <h2 className="font-display text-3xl font-bold">Crie sua conta</h2>
+          <p className="mt-2 text-muted-foreground">Como você deseja utilizar a plataforma Forbin?</p>
+
+          <div className="mt-10 grid gap-6 sm:grid-cols-2">
+            <button
+              onClick={() => setStep(1)}
+              className="flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-border/60 bg-surface p-8 transition hover:border-primary hover:bg-primary/5 hover:shadow-gold group"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
+                <Briefcase className="h-8 w-8" />
+              </div>
+              <div>
+                <p className="font-display text-xl font-bold">Sou Profissional</p>
+                <p className="mt-1 text-sm text-muted-foreground">Quero me candidatar a vagas e acessar cursos.</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate({ to: "/cadastro-empresa" as any })}
+              className="flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-border/60 bg-surface p-8 transition hover:border-primary hover:bg-primary/5 hover:shadow-gold group"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
+                <Building2 className="h-8 w-8" />
+              </div>
+              <div>
+                <p className="font-display text-xl font-bold">Sou Empresa</p>
+                <p className="mt-1 text-sm text-muted-foreground">Quero anunciar vagas e encontrar profissionais.</p>
+              </div>
+            </button>
+          </div>
+          <p className="mt-8 text-sm text-muted-foreground">
+            Já tem conta? <Link to="/login" className="text-primary hover:underline">Entre aqui</Link>
+          </p>
+        </div>
+      )}
+
+      {step > 0 && (
       <div className="rounded-3xl border border-border/60 bg-card p-8 sm:p-10 shadow-elevated">
         {step === 1 && (
           <div className="space-y-5">
@@ -298,11 +339,14 @@ function CadastroProfissional() {
           )}
         </div>
       </div>
+      )}
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Já tem conta?{" "}
-        <Link to="/login" className="font-semibold text-primary hover:underline">Entrar</Link>
-      </p>
+      {step > 0 && (
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Já tem conta?{" "}
+          <Link to="/login" className="font-semibold text-primary hover:underline">Entrar</Link>
+        </p>
+      )}
     </div>
   );
 }
