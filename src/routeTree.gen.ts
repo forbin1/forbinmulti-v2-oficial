@@ -28,6 +28,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VagasIndexRouteImport } from './routes/vagas.index'
 import { Route as EmpresaIndexRouteImport } from './routes/empresa.index'
+import { Route as CursosIndexRouteImport } from './routes/cursos.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as VagasJobIdRouteImport } from './routes/vagas.$jobId'
 import { Route as UHandleRouteImport } from './routes/u.$handle'
@@ -143,6 +144,11 @@ const EmpresaIndexRoute = EmpresaIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => EmpresaRoute,
+} as any)
+const CursosIndexRoute = CursosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CursosRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -283,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/cursos/': typeof CursosIndexRoute
   '/empresa/': typeof EmpresaIndexRoute
   '/vagas/': typeof VagasIndexRoute
 }
@@ -292,7 +299,6 @@ export interface FileRoutesByTo {
   '/cadastro-empresa': typeof CadastroEmpresaRoute
   '/candidaturas': typeof CandidaturasRoute
   '/certificados': typeof CertificadosRoute
-  '/cursos': typeof CursosRouteWithChildren
   '/favoritos': typeof FavoritosRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
@@ -322,6 +328,7 @@ export interface FileRoutesByTo {
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
   '/admin': typeof AdminIndexRoute
+  '/cursos': typeof CursosIndexRoute
   '/empresa': typeof EmpresaIndexRoute
   '/vagas': typeof VagasIndexRoute
 }
@@ -364,6 +371,7 @@ export interface FileRoutesById {
   '/u/$handle': typeof UHandleRoute
   '/vagas/$jobId': typeof VagasJobIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/cursos/': typeof CursosIndexRoute
   '/empresa/': typeof EmpresaIndexRoute
   '/vagas/': typeof VagasIndexRoute
 }
@@ -407,6 +415,7 @@ export interface FileRouteTypes {
     | '/u/$handle'
     | '/vagas/$jobId'
     | '/admin/'
+    | '/cursos/'
     | '/empresa/'
     | '/vagas/'
   fileRoutesByTo: FileRoutesByTo
@@ -416,7 +425,6 @@ export interface FileRouteTypes {
     | '/cadastro-empresa'
     | '/candidaturas'
     | '/certificados'
-    | '/cursos'
     | '/favoritos'
     | '/feed'
     | '/login'
@@ -446,6 +454,7 @@ export interface FileRouteTypes {
     | '/u/$handle'
     | '/vagas/$jobId'
     | '/admin'
+    | '/cursos'
     | '/empresa'
     | '/vagas'
   id:
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
     | '/u/$handle'
     | '/vagas/$jobId'
     | '/admin/'
+    | '/cursos/'
     | '/empresa/'
     | '/vagas/'
   fileRoutesById: FileRoutesById
@@ -649,6 +659,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/empresa/'
       preLoaderRoute: typeof EmpresaIndexRouteImport
       parentRoute: typeof EmpresaRoute
+    }
+    '/cursos/': {
+      id: '/cursos/'
+      path: '/'
+      fullPath: '/cursos/'
+      preLoaderRoute: typeof CursosIndexRouteImport
+      parentRoute: typeof CursosRoute
     }
     '/admin/': {
       id: '/admin/'
@@ -823,10 +840,12 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface CursosRouteChildren {
   CursosCourseIdRoute: typeof CursosCourseIdRoute
+  CursosIndexRoute: typeof CursosIndexRoute
 }
 
 const CursosRouteChildren: CursosRouteChildren = {
   CursosCourseIdRoute: CursosCourseIdRoute,
+  CursosIndexRoute: CursosIndexRoute,
 }
 
 const CursosRouteWithChildren =
