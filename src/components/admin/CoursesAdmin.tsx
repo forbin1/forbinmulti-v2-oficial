@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { createServerFn } from "@tanstack/react-start";
 import { Pencil, Trash2, Eye, EyeOff, Plus, GraduationCap, Loader2, Layers, Upload, FileText } from "lucide-react";
 import { ModulesManager } from "@/components/admin/ModulesManager";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +65,57 @@ const EMPTY: Omit<Course, "id"> = {
   commission_percentage: 0,
 };
 
+const createCourseServer = createServerFn({ method: "POST" })
+  .validator((d: any) => d)
+  .handler(async ({ data: payload }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("courses")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+const updateCourseServer = createServerFn({ method: "POST" })
+  .validator((d: { id: string; payload: any }) => d)
+  .handler(async ({ data: { id, payload } }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("courses")
+      .update(payload)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+const deleteCourseServer = createServerFn({ method: "POST" })
+  .validator((id: string) => id)
+  .handler(async ({ data: id }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("courses")
+      .delete()
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+const toggleCoursePublishedServer = createServerFn({ method: "POST" })
+  .validator((d: { id: string; is_published: boolean }) => d)
+  .handler(async ({ data: { id, is_published } }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("courses")
+      .update({ is_published })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
 export function CoursesAdmin() {
   const [items, setItems] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,21 +140,24 @@ export function CoursesAdmin() {
   }, []);
 
   const togglePublished = async (c: Course) => {
-    const { error } = await supabase
-      .from("courses")
-      .update({ is_published: !c.is_published })
-      .eq("id", c.id);
-    if (error) return toast.error(error.message);
-    toast.success(c.is_published ? "Curso ocultado" : "Curso publicado");
-    load();
+    try {
+      await toggleCoursePublishedServer({ data: { id: c.id, is_published: !c.is_published } });
+      toast.success(c.is_published ? "Curso ocultado" : "Curso publicado");
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar curso");
+    }
   };
 
   const remove = async (id: string) => {
-    const { error } = await supabase.from("courses").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Curso excluído");
-    setDeleteId(null);
-    load();
+    try {
+      await deleteCourseServer({ data: id });
+      toast.success("Curso excluído");
+      setDeleteId(null);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao excluir curso");
+    }
   };
 
   return (
@@ -338,13 +393,20 @@ function CourseDialog({
       affiliate_available: form.affiliate_available ?? false,
       commission_percentage: form.affiliate_available ? (Number(form.commission_percentage) || 0) : null,
     };
-    const { error } = course
-      ? await supabase.from("courses").update(payload).eq("id", course.id)
-      : await supabase.from("courses").insert(payload);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(course ? "Curso atualizado" : "Curso criado");
-    onSaved();
+
+    try {
+      if (course) {
+        await updateCourseServer({ data: { id: course.id, payload } });
+      } else {
+        await createCourseServer({ data: payload });
+      }
+      setSaving(false);
+      toast.success(course ? "Curso atualizado" : "Curso criado");
+      onSaved();
+    } catch (err: any) {
+      setSaving(false);
+      toast.error(err.message || "Erro ao salvar curso");
+    }
   };
 
   return (
