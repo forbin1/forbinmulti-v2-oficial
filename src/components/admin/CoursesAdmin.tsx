@@ -45,6 +45,8 @@ type Course = {
   thumbnail_url: string | null;
   price: number | null;
   is_published: boolean;
+  affiliate_available?: boolean;
+  commission_percentage?: number | null;
 };
 
 const EMPTY: Omit<Course, "id"> = {
@@ -58,6 +60,8 @@ const EMPTY: Omit<Course, "id"> = {
   thumbnail_url: "",
   price: null,
   is_published: true,
+  affiliate_available: false,
+  commission_percentage: 0,
 };
 
 export function CoursesAdmin() {
@@ -236,7 +240,9 @@ function CourseDialog({
   const [saving, setSaving] = useState(false);
   const [supportMaterialUrl, setSupportMaterialUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (course) {
@@ -245,10 +251,19 @@ function CourseDialog({
       const match = desc.match(/\[SUPPORT_MATERIAL:(.*?)\]/);
       if (match) {
         setSupportMaterialUrl(match[1]);
-        setForm({ ...rest, description: desc.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim() });
+        setForm({ 
+          ...rest, 
+          description: desc.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim(),
+          affiliate_available: rest.affiliate_available ?? false,
+          commission_percentage: rest.commission_percentage ?? 0
+        });
       } else {
         setSupportMaterialUrl("");
-        setForm(rest);
+        setForm({
+          ...rest,
+          affiliate_available: rest.affiliate_available ?? false,
+          commission_percentage: rest.commission_percentage ?? 0
+        });
       }
     } else {
       setForm(EMPTY);
@@ -269,7 +284,7 @@ function CourseDialog({
       .upload(path, file, { upsert: false });
 
     if (error) {
-      setUploading(true);
+      setUploading(false);
       toast.error("Erro no upload: " + error.message);
       return;
     }
@@ -278,6 +293,28 @@ function CourseDialog({
     setSupportMaterialUrl(data.publicUrl);
     setUploading(false);
     toast.success("Material de apoio carregado!");
+  };
+
+  const handleUploadCover = async (file: File) => {
+    setUploadingCover(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const rand = Math.random().toString(36).substring(2, 15);
+    const path = `courses/covers/${rand}.${ext}`;
+    
+    const { error } = await supabase.storage
+      .from("certificates")
+      .upload(path, file, { upsert: false });
+
+    if (error) {
+      setUploadingCover(false);
+      toast.error("Erro no upload da capa: " + error.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from("certificates").getPublicUrl(path);
+    set("thumbnail_url", data.publicUrl);
+    setUploadingCover(false);
+    toast.success("Capa do curso carregada!");
   };
 
   const save = async () => {
@@ -298,6 +335,8 @@ function CourseDialog({
       duration_hours: Number(form.duration_hours) || 0,
       total_lessons: Number(form.total_lessons) || 0,
       price: form.price ? Number(form.price) : null,
+      affiliate_available: form.affiliate_available ?? false,
+      commission_percentage: form.affiliate_available ? (Number(form.commission_percentage) || 0) : null,
     };
     const { error } = course
       ? await supabase.from("courses").update(payload).eq("id", course.id)
@@ -370,9 +409,80 @@ function CourseDialog({
             )}
           </div>
 
-          <Field label="URL da capa (thumbnail)">
-            <Input value={form.thumbnail_url ?? ""} onChange={(e) => set("thumbnail_url", e.target.value)} placeholder="https://..." />
-          </Field>
+          <div>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground block mb-2">Capa do Curso (Thumbnail) *</Label>
+            <div className="flex flex-col gap-4">
+              {form.thumbnail_url ? (
+                <div className="relative aspect-video w-full max-w-sm overflow-hidden rounded-xl border border-border/60 bg-muted">
+                  <img src={form.thumbnail_url} alt="Capa do curso" className="h-full w-full object-cover" />
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    size="sm" 
+                    className="absolute right-2 top-2 rounded-full h-8 px-3"
+                    onClick={() => set("thumbnail_url", "")}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  onClick={() => coverInputRef.current?.click()}
+                  className="flex aspect-video w-full max-w-sm cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 hover:border-primary/50 transition-colors bg-muted/20 py-8"
+                >
+                  {uploadingCover ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-xs text-muted-foreground">Clique para enviar imagem da capa</span>
+                    </>
+                  )}
+                </div>
+              )}
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadCover(f);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-muted/5 p-4 space-y-4">
+            <h4 className="font-display text-sm font-bold text-gradient-gold">Opções de Afiliação & Marketplace</h4>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex items-center gap-2.5 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.affiliate_available || false}
+                  onChange={(e) => set("affiliate_available", e.target.checked)}
+                  className="h-4 w-4 rounded border-border bg-surface text-primary focus:ring-primary"
+                />
+                <div>
+                  <span className="font-semibold block">Disponível para Afiliação</span>
+                  <span className="text-xs text-muted-foreground">Mostrar no marketplace para empresas</span>
+                </div>
+              </label>
+
+              {form.affiliate_available && (
+                <Field label="Comissão da Afiliação (%)">
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    value={form.commission_percentage ?? 0}
+                    onChange={(e) => set("commission_percentage", Number(e.target.value))} 
+                  />
+                </Field>
+              )}
+            </div>
+          </div>
 
           <div>
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Material de Apoio (Opcional)</Label>
@@ -409,11 +519,12 @@ function CourseDialog({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={form.is_published}
               onChange={(e) => set("is_published", e.target.checked)}
+              className="h-4 w-4 rounded border-border bg-surface text-primary focus:ring-primary"
             />
             Publicado (visível na plataforma)
           </label>
