@@ -581,12 +581,20 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
   const totalComments = (post.comments_count || 0) + comments.length;
   const isSelf = user?.id === post.user_id;
 
-  const addComment = () => {
+  const addComment = async () => {
     const text = commentDraft.trim();
-    if (!text) return;
-    const authorName = user?.user_metadata?.full_name || user?.user_metadata?.company_name || "Usuário";
-    const authorAvatar = user?.user_metadata?.avatar_url;
-    const authorHandle = user?.user_metadata?.handle || user?.email?.split("@")[0] || "user";
+    if (!text || !user) return;
+
+    // Fetch the latest profile data just for this comment submission
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, avatar_url, handle")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const authorName = profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.company_name || "Usuário";
+    const authorAvatar = profile?.avatar_url || user.user_metadata?.avatar_url;
+    const authorHandle = profile?.handle || user.user_metadata?.handle || user.email?.split("@")[0] || "user";
     
     setComments((c) => [...c, { id: `${Date.now()}`, author: authorName, text, avatar: authorAvatar, handle: authorHandle }]);
     setCommentDraft("");
