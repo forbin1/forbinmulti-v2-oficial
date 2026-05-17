@@ -141,8 +141,6 @@ function PerfilEmpresa() {
         </div>
       </div>
 
-      </div>
-
       {/* Profile Details */}
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
