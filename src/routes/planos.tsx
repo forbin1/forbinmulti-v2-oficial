@@ -160,10 +160,18 @@ function PlanosPage() {
                   {professionals.filter(p => p.period === "month").map(p => (
                     <MonthlyCard key={p.id} plan={p} ctaTo="/cadastro" />
                   ))}
-                  {/* Annual — highlighted, takes 2 columns */}
-                  {professionals.filter(p => p.period === "year").map(p => (
-                    <AnnualProfCard key={p.id} plan={p} ctaTo="/cadastro" />
-                  ))}
+                  {/* Annual — uses monthly price as installment display */}
+                  {professionals.filter(p => p.period === "year").map(p => {
+                    const monthly = professionals.find(m => m.period === "month");
+                    return (
+                      <AnnualProfCard
+                        key={p.id}
+                        plan={p}
+                        ctaTo="/cadastro"
+                        installmentCents={monthly?.price_cents ?? p.price_cents / 12}
+                      />
+                    );
+                  })}
                   {/* Why subscribe */}
                   <div className="flex flex-col justify-center rounded-3xl border border-dashed border-border/50 bg-card/30 p-8">
                     <Star className="h-8 w-8 text-primary mb-4" />
@@ -201,9 +209,17 @@ function PlanosPage() {
                   {companies.filter(p => p.period === "month").map(p => (
                     <MonthlyCard key={p.id} plan={p} ctaTo="/cadastro-empresa" />
                   ))}
-                  {companies.filter(p => p.period === "year").map(p => (
-                    <AnnualEmpresaCard key={p.id} plan={p} ctaTo="/cadastro-empresa" />
-                  ))}
+                  {companies.filter(p => p.period === "year").map(p => {
+                    const monthly = companies.find(m => m.period === "month");
+                    return (
+                      <AnnualEmpresaCard
+                        key={p.id}
+                        plan={p}
+                        ctaTo="/cadastro-empresa"
+                        installmentCents={p.price_cents / 12}
+                      />
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -259,10 +275,9 @@ function MonthlyCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
 }
 
 /* ── Annual Professional card (highlighted) ── */
-function AnnualProfCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
-  // Profissional Anual: R$ 297,90/ano → 12x de R$ 24,83
+function AnnualProfCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: string; installmentCents: number }) {
+  const installment = installmentCents / 100;
   const totalBRL = plan.price_cents / 100;
-  const installment = totalBRL / 12;
   return (
     <div className="relative flex flex-col rounded-3xl border-2 border-primary bg-gradient-to-br from-primary/20 via-primary/8 to-transparent p-8 shadow-gold">
       <Badge className="absolute -top-3.5 left-8 rounded-full bg-primary px-4 py-1 text-xs font-bold text-primary-foreground shadow-gold">
@@ -272,14 +287,14 @@ function AnnualProfCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Anual — Melhor custo-benefício</p>
       <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
 
-      {/* Big installment — inline on one line */}
+      {/* Installment inline: R$27,90 12x */}
       <div className="mt-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">No cartão</p>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="font-display text-5xl font-black text-primary">
+        <div className="flex items-end gap-2">
+          <span className="font-display text-5xl font-black text-primary leading-none">
             R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
-          <span className="text-2xl font-bold text-foreground">12x</span>
+          <span className="text-2xl font-bold text-foreground pb-0.5">12x</span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
@@ -306,10 +321,9 @@ function AnnualProfCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
 }
 
 /* ── Annual Empresa card (highlighted) ── */
-function AnnualEmpresaCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
-  // Empresa Anual: R$ 3.000,00/ano → 12x de R$ 300,00
+function AnnualEmpresaCard({ plan, ctaTo, installmentCents }: { plan: Plan; ctaTo: string; installmentCents: number }) {
+  const installment = installmentCents / 100;
   const totalBRL = plan.price_cents / 100;
-  const installment = totalBRL / 12;
   return (
     <div className="relative flex flex-col rounded-3xl border-2 border-primary bg-gradient-to-br from-primary/20 via-primary/8 to-transparent p-8 shadow-gold">
       <Badge className="absolute -top-3.5 left-8 rounded-full bg-primary px-4 py-1 text-xs font-bold text-primary-foreground shadow-gold">
@@ -319,14 +333,14 @@ function AnnualEmpresaCard({ plan, ctaTo }: { plan: Plan; ctaTo: string }) {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Anual — Máxima performance</p>
       <h3 className="mt-2 font-display text-2xl font-bold">{plan.name}</h3>
 
-      {/* Big installment — inline on one line */}
+      {/* Installment inline: R$250,00 12x */}
       <div className="mt-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">No cartão</p>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="font-display text-5xl font-black text-primary">
+        <div className="flex items-end gap-2">
+          <span className="font-display text-5xl font-black text-primary leading-none">
             R$ {installment.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
-          <span className="text-2xl font-bold text-foreground">12x</span>
+          <span className="text-2xl font-bold text-foreground pb-0.5">12x</span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           ou no PIX <span className="font-bold text-foreground">R$ {totalBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> à vista
