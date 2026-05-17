@@ -573,7 +573,7 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
   };
 
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<{ id: string; author: string; text: string }[]>([]);
+  const [comments, setComments] = useState<{ id: string; author: string; text: string; avatar?: string; handle?: string }[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
 
   if (deleted) return null;
@@ -584,8 +584,11 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
   const addComment = () => {
     const text = commentDraft.trim();
     if (!text) return;
-    const authorName = user?.user_metadata?.full_name || "Você";
-    setComments((c) => [...c, { id: `${Date.now()}`, author: authorName, text }]);
+    const authorName = user?.user_metadata?.full_name || user?.user_metadata?.company_name || "Usuário";
+    const authorAvatar = user?.user_metadata?.avatar_url;
+    const authorHandle = user?.user_metadata?.handle || user?.email?.split("@")[0] || "user";
+    
+    setComments((c) => [...c, { id: `${Date.now()}`, author: authorName, text, avatar: authorAvatar, handle: authorHandle }]);
     setCommentDraft("");
   };
 
@@ -653,9 +656,22 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
       {showComments && (
         <div className="mt-4 space-y-3 border-t border-border/60 pt-4">
           {comments.map((c) => (
-            <div key={c.id} className="rounded-xl bg-surface px-3 py-2 text-sm">
-              <p className="font-semibold">{c.author}</p>
-              <p className="text-muted-foreground">{c.text}</p>
+            <div key={c.id} className="flex gap-3 rounded-xl bg-surface px-3 py-3 text-sm">
+              <Link to="/u/$handle" params={{ handle: c.handle || "user" }} className="shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground">
+                  {c.avatar ? (
+                    <img src={c.avatar} alt={c.author} className="h-full w-full object-cover" />
+                  ) : (
+                    c.author.charAt(0).toUpperCase()
+                  )}
+                </div>
+              </Link>
+              <div className="min-w-0 flex-1">
+                <Link to="/u/$handle" params={{ handle: c.handle || "user" }} className="font-semibold hover:underline">
+                  {c.author}
+                </Link>
+                <p className="mt-0.5 text-foreground/90">{c.text}</p>
+              </div>
             </div>
           ))}
           <div className="flex gap-2">
