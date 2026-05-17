@@ -226,6 +226,19 @@ function CourseDetailPage() {
     return out;
   }, [modules, lessons]);
 
+  // Extrai material de apoio se presente na descrição (Unconditional hook call for Rule of Hooks compliance)
+  const { descriptionText, materialUrl } = useMemo(() => {
+    if (!course || !course.description) return { descriptionText: "", materialUrl: null };
+    const match = course.description.match(/\[SUPPORT_MATERIAL:(.*?)\]/);
+    if (match) {
+      return {
+        descriptionText: course.description.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim(),
+        materialUrl: match[1],
+      };
+    }
+    return { descriptionText: course.description, materialUrl: null };
+  }, [course?.description]);
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -247,19 +260,6 @@ function CourseDetailPage() {
   const total = lessons.length;
   const progressPercent = total > 0 ? Math.round((completed.size / total) * 100) : 0;
   const isAllDone = total > 0 && completed.size === total;
-
-  // Extrai material de apoio se presente na descrição
-  const { descriptionText, materialUrl } = useMemo(() => {
-    if (!course.description) return { descriptionText: "", materialUrl: null };
-    const match = course.description.match(/\[SUPPORT_MATERIAL:(.*?)\]/);
-    if (match) {
-      return {
-        descriptionText: course.description.replace(/\[SUPPORT_MATERIAL:(.*?)\]/, "").trim(),
-        materialUrl: match[1],
-      };
-    }
-    return { descriptionText: course.description, materialUrl: null };
-  }, [course.description]);
 
   return (
     <div className="min-h-screen bg-background">
