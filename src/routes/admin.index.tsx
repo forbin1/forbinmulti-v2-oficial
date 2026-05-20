@@ -39,6 +39,8 @@ type Stats = {
   companyPriceCents: number;
   activeSubscriptionsCount: number;
   experiencesCount: number;
+  realMonthlyRevenue: number;
+  realTotalFaturamento: number;
 };
 
 type RecentUser = {
@@ -66,7 +68,9 @@ function generatePath(points: number[], w = 200, h = 48): string {
   const max = Math.max(...points);
   const range = max - min || 1;
   const xs = points.map((_, i) => (i / (points.length - 1)) * w);
-  const ys = points.map((v) => h - ((v - min) / range) * (h * 0.8) - h * 0.1);
+  const ys = points.map((v) => {
+    return h - ((v - min) / range) * (h * 0.8) - h * 0.1;
+  });
 
   let d = `M ${xs[0]} ${ys[0]}`;
   for (let i = 1; i < points.length; i++) {
@@ -90,9 +94,18 @@ function Sparkline({
   gradientColor: string;
   animated?: boolean;
 }) {
+  const [scale, setScale] = useState(0);
   const pathRef = useRef<SVGPathElement>(null);
   const [dashLen, setDashLen] = useState(0);
   const [drawn, setDrawn] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setScale(1);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, []);
+
   const linePath = generatePath(points, 200, 48);
   const areaPath = linePath + " L 200 48 L 0 48 Z";
 
@@ -125,45 +138,64 @@ function Sparkline({
         </filter>
       </defs>
 
-      {/* Area fill */}
-      <path d={areaPath} fill={`url(#${gradientId})`} />
+      {/* Wrapping group that animates using scaleY crescendo from bottom */}
+      <g
+        style={{
+          transform: `scaleY(${scale})`,
+          transformOrigin: "bottom",
+          transition: "transform 1.6s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+      >
+        {/* Area fill */}
+        <path
+          d={areaPath}
+          fill={`url(#${gradientId})`}
+        />
 
-      {/* Animated stroke */}
-      <path
-        ref={pathRef}
-        d={linePath}
-        fill="none"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter={`url(#glow-${gradientId})`}
-        style={
-          animated && dashLen > 0
-            ? {
-                strokeDasharray: dashLen,
-                strokeDashoffset: drawn ? 0 : dashLen,
-                transition: "stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)",
-              }
-            : undefined
-        }
-      />
+        {/* Animated stroke */}
+        <path
+          ref={pathRef}
+          d={linePath}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          filter={`url(#glow-${gradientId})`}
+          style={{
+            strokeDasharray: dashLen,
+            strokeDashoffset: drawn ? 0 : dashLen,
+            transition: "stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        />
 
-      {/* End dot glow */}
-      {points.length > 0 && (() => {
-        const last = points[points.length - 1];
-        const min = Math.min(...points);
-        const max = Math.max(...points);
-        const range = max - min || 1;
-        const x = 200;
-        const y = 48 - ((last - min) / range) * (48 * 0.8) - 48 * 0.1;
-        return (
-          <>
-            <circle cx={x} cy={y} r="5" fill={color} opacity="0.18" />
-            <circle cx={x} cy={y} r="2.5" fill={color} />
-          </>
-        );
-      })()}
+        {/* End dot glow */}
+        {points.length > 0 && (() => {
+          const last = points[points.length - 1];
+          const min = Math.min(...points);
+          const max = Math.max(...points);
+          const range = max - min || 1;
+          const x = 200;
+          const y = 48 - ((last - min) / range) * (48 * 0.8) - 48 * 0.1;
+          return (
+            <>
+              <circle
+                cx={x}
+                cy={y}
+                r="5"
+                fill={color}
+                opacity="0.18"
+              />
+              <circle
+                cx={x}
+                cy={y}
+                r="2.5"
+                fill={color}
+              />
+            </>
+          );
+        })()}
+      </g>
     </svg>
   );
 }
@@ -174,7 +206,10 @@ function AnimatedCounter({ value, prefix = "", suffix = "" }: { value: number; p
   useEffect(() => {
     let start = 0;
     const end = value;
-    if (end === 0) return;
+    if (end === 0) {
+      setDisplay(0);
+      return;
+    }
     const dur = 900;
     const step = 16;
     const inc = end / (dur / step);
@@ -201,7 +236,7 @@ function AdminDashboard() {
   useEffect(() => {
     const load = async () => {
       const head = { count: "exact" as const, head: true };
-      const [p, c, j, co, ce, en, exp, plansRes, latestProfiles] =
+      const [p, c, j, co, ce, en, exp, plansRes, latestProfiles, activeProfilesRes] =
         await Promise.all([
           supabase.from("profiles").select("*", head),
           supabase.from("companies").select("*", head),
@@ -212,17 +247,59 @@ function AdminDashboard() {
           supabase.from("posts").select("*", head),
           supabase
             .from("plans")
-            .select("audience, price_cents, sort_order")
-            .eq("is_published", true)
-            .order("sort_order", { ascending: true }),
+            .select("slug, audience, price_cents, period, sort_order"),
           supabase
             .from("profiles")
             .select("id, full_name, avatar_url, role, created_at")
             .order("created_at", { ascending: false })
             .limit(5),
+          supabase
+            .from("profiles")
+            .select("role, subscription_plan, created_at")
+            .eq("subscription_status", "active"),
         ]);
 
       const plans = plansRes.data ?? [];
+      const activeProfiles = activeProfilesRes.data ?? [];
+
+      let mrrCents = 0;
+      let faturamentoCents = 0;
+
+      activeProfiles.forEach((prof) => {
+        const plan = plans.find((pl) => pl.slug === prof.subscription_plan);
+        let priceCents = 0;
+        let isYearly = false;
+
+        if (plan) {
+          priceCents = plan.price_cents;
+          isYearly = plan.period === "year";
+        } else {
+          // Default fallbacks if legacy or slug not matched perfectly
+          if (prof.role === "company") {
+            priceCents = 29790; // Default company plan: R$ 297.90
+            isYearly = false;
+          } else {
+            priceCents = 2790; // Default professional plan: R$ 27.90
+            isYearly = false;
+          }
+        }
+
+        const monthlyEquivalent = isYearly ? Math.round(priceCents / 12) : priceCents;
+        mrrCents += monthlyEquivalent;
+
+        // Calculate active months since user was created
+        let monthsActive = 1;
+        if (prof.created_at) {
+          const created = new Date(prof.created_at);
+          const now = new Date();
+          const diffTime = Math.abs(now.getTime() - created.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          monthsActive = Math.max(1, Math.ceil(diffDays / 30));
+        }
+
+        faturamentoCents += monthlyEquivalent * monthsActive;
+      });
+
       const proPlan = plans.find((pl) => pl.audience === "professional");
       const compPlan = plans.find((pl) => pl.audience === "company");
 
@@ -233,10 +310,12 @@ function AdminDashboard() {
         courses: co.count ?? 0,
         certificates: ce.count ?? 0,
         enrollments: en.count ?? 0,
-        professionalPriceCents: proPlan?.price_cents ?? 1990,
+        professionalPriceCents: proPlan?.price_cents ?? 2790,
         companyPriceCents: compPlan?.price_cents ?? 29790,
-        activeSubscriptionsCount: (p.count ?? 0) + (c.count ?? 0),
+        activeSubscriptionsCount: activeProfiles.length,
         experiencesCount: exp.count ?? 0,
+        realMonthlyRevenue: mrrCents / 100,
+        realTotalFaturamento: faturamentoCents / 100,
       });
 
       if (latestProfiles.data) {
@@ -266,12 +345,8 @@ function AdminDashboard() {
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 
   /* ── Revenue calcs (real) ── */
-  const proRevenue =
-    ((stats?.professionals ?? 0) * (stats?.professionalPriceCents ?? 1990)) / 100;
-  const compRevenue =
-    ((stats?.companies ?? 0) * (stats?.companyPriceCents ?? 29790)) / 100;
-  const monthlyRevenue = proRevenue + compRevenue;
-  const totalFaturamento = monthlyRevenue * 12.4;
+  const monthlyRevenue = stats?.realMonthlyRevenue ?? 0;
+  const totalFaturamento = stats?.realTotalFaturamento ?? 0;
 
   /* ── Sparkline data sets ── */
   const revenuePoints = [42, 55, 48, 70, 65, 82, 95, 88, 110, 120, 115, 130];
