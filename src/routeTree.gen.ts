@@ -40,6 +40,7 @@ import { Route as EmpresaConfiguracoesRouteImport } from './routes/empresa.confi
 import { Route as EmpresaCandidatosRouteImport } from './routes/empresa.candidatos'
 import { Route as EmpresaAfiliadosRouteImport } from './routes/empresa.afiliados'
 import { Route as CursosCourseIdRouteImport } from './routes/cursos.$courseId'
+import { Route as CheckoutCourseIdRouteImport } from './routes/checkout.$courseId'
 import { Route as AdminVslRouteImport } from './routes/admin.vsl'
 import { Route as AdminVagasRouteImport } from './routes/admin.vagas'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
@@ -205,6 +206,11 @@ const CursosCourseIdRoute = CursosCourseIdRouteImport.update({
   path: '/$courseId',
   getParentRoute: () => CursosRoute,
 } as any)
+const CheckoutCourseIdRoute = CheckoutCourseIdRouteImport.update({
+  id: '/checkout/$courseId',
+  path: '/checkout/$courseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVslRoute = AdminVslRouteImport.update({
   id: '/vsl',
   path: '/vsl',
@@ -278,6 +284,7 @@ export interface FileRoutesByFullPath {
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
+  '/checkout/$courseId': typeof CheckoutCourseIdRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
   '/empresa/afiliados': typeof EmpresaAfiliadosRoute
   '/empresa/candidatos': typeof EmpresaCandidatosRoute
@@ -317,6 +324,7 @@ export interface FileRoutesByTo {
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
+  '/checkout/$courseId': typeof CheckoutCourseIdRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
   '/empresa/afiliados': typeof EmpresaAfiliadosRoute
   '/empresa/candidatos': typeof EmpresaCandidatosRoute
@@ -360,6 +368,7 @@ export interface FileRoutesById {
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/vagas': typeof AdminVagasRoute
   '/admin/vsl': typeof AdminVslRoute
+  '/checkout/$courseId': typeof CheckoutCourseIdRoute
   '/cursos/$courseId': typeof CursosCourseIdRoute
   '/empresa/afiliados': typeof EmpresaAfiliadosRoute
   '/empresa/candidatos': typeof EmpresaCandidatosRoute
@@ -404,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/profissionais'
     | '/admin/vagas'
     | '/admin/vsl'
+    | '/checkout/$courseId'
     | '/cursos/$courseId'
     | '/empresa/afiliados'
     | '/empresa/candidatos'
@@ -443,6 +453,7 @@ export interface FileRouteTypes {
     | '/admin/profissionais'
     | '/admin/vagas'
     | '/admin/vsl'
+    | '/checkout/$courseId'
     | '/cursos/$courseId'
     | '/empresa/afiliados'
     | '/empresa/candidatos'
@@ -485,6 +496,7 @@ export interface FileRouteTypes {
     | '/admin/profissionais'
     | '/admin/vagas'
     | '/admin/vsl'
+    | '/checkout/$courseId'
     | '/cursos/$courseId'
     | '/empresa/afiliados'
     | '/empresa/candidatos'
@@ -519,6 +531,7 @@ export interface RootRouteChildren {
   ProfissionaisAtivosRoute: typeof ProfissionaisAtivosRouteWithChildren
   ProfissionalRoute: typeof ProfissionalRoute
   RevisorCurriculoRoute: typeof RevisorCurriculoRoute
+  CheckoutCourseIdRoute: typeof CheckoutCourseIdRoute
   PerfilUsernameRoute: typeof PerfilUsernameRoute
   UHandleRoute: typeof UHandleRoute
   VagasJobIdRoute: typeof VagasJobIdRoute
@@ -744,6 +757,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CursosCourseIdRouteImport
       parentRoute: typeof CursosRoute
     }
+    '/checkout/$courseId': {
+      id: '/checkout/$courseId'
+      path: '/checkout/$courseId'
+      fullPath: '/checkout/$courseId'
+      preLoaderRoute: typeof CheckoutCourseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/vsl': {
       id: '/admin/vsl'
       path: '/vsl'
@@ -901,6 +921,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfissionaisAtivosRoute: ProfissionaisAtivosRouteWithChildren,
   ProfissionalRoute: ProfissionalRoute,
   RevisorCurriculoRoute: RevisorCurriculoRoute,
+  CheckoutCourseIdRoute: CheckoutCourseIdRoute,
   PerfilUsernameRoute: PerfilUsernameRoute,
   UHandleRoute: UHandleRoute,
   VagasJobIdRoute: VagasJobIdRoute,
