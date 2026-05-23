@@ -232,112 +232,118 @@ function AdminDashboard() {
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      const head = { count: "exact" as const, head: true };
-      const [p, c, j, co, ce, en, exp, plansRes, latestProfiles, activeProfilesRes] =
-        await Promise.all([
-          supabase.from("profiles").select("*", head),
-          supabase.from("companies").select("*", head),
-          supabase.from("jobs").select("*", head).eq("is_published", true),
-          supabase.from("courses").select("*", head),
-          supabase.from("certificates").select("*", head),
-          supabase.from("enrollments").select("*", head),
-          supabase.from("posts").select("*", head),
-          supabase
-            .from("plans")
-            .select("slug, audience, price_cents, period, sort_order"),
-          supabase
-            .from("profiles")
-            .select("id, full_name, avatar_url, role, created_at")
-            .order("created_at", { ascending: false })
-            .limit(5),
-          supabase
-            .from("profiles")
-            .select("role, subscription_plan, created_at")
-            .eq("subscription_status", "active"),
-        ]);
+  const load = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
 
-      const plans = plansRes.data ?? [];
-      const activeProfiles = activeProfilesRes.data ?? [];
+    const head = { count: "exact" as const, head: true };
+    const [p, c, j, co, ce, en, exp, plansRes, latestProfiles, activeProfilesRes] =
+      await Promise.all([
+        supabase.from("profiles").select("*", head),
+        supabase.from("companies").select("*", head),
+        supabase.from("jobs").select("*", head).eq("is_published", true),
+        supabase.from("courses").select("*", head),
+        supabase.from("certificates").select("*", head),
+        supabase.from("enrollments").select("*", head),
+        supabase.from("posts").select("*", head),
+        supabase
+          .from("plans")
+          .select("slug, audience, price_cents, period, sort_order"),
+        supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, role, created_at")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("profiles")
+          .select("role, subscription_plan, created_at")
+          .eq("subscription_status", "active"),
+      ]);
 
-      let mrrCents = 0;
-      let faturamentoCents = 0;
+    const plans = plansRes.data ?? [];
+    const activeProfiles = activeProfilesRes.data ?? [];
 
-      activeProfiles.forEach((prof) => {
-        const plan = plans.find((pl) => pl.slug === prof.subscription_plan);
-        let priceCents = 0;
-        let isYearly = false;
+    let mrrCents = 0;
+    let faturamentoCents = 0;
 
-        if (plan) {
-          priceCents = plan.price_cents;
-          isYearly = plan.period === "year";
+    activeProfiles.forEach((prof) => {
+      const plan = plans.find((pl) => pl.slug === prof.subscription_plan);
+      let priceCents = 0;
+      let isYearly = false;
+
+      if (plan) {
+        priceCents = plan.price_cents;
+        isYearly = plan.period === "year";
+      } else {
+        // Default fallbacks if legacy or slug not matched perfectly
+        if (prof.role === "company") {
+          priceCents = 29790; // Default company plan: R$ 297.90
+          isYearly = false;
         } else {
-          // Default fallbacks if legacy or slug not matched perfectly
-          if (prof.role === "company") {
-            priceCents = 29790; // Default company plan: R$ 297.90
-            isYearly = false;
-          } else {
-            priceCents = 2790; // Default professional plan: R$ 27.90
-            isYearly = false;
-          }
+          priceCents = 2790; // Default professional plan: R$ 27.90
+          isYearly = false;
         }
-
-        const monthlyEquivalent = isYearly ? Math.round(priceCents / 12) : priceCents;
-        mrrCents += monthlyEquivalent;
-
-        // Calculate active months since user was created
-        let monthsActive = 1;
-        if (prof.created_at) {
-          const created = new Date(prof.created_at);
-          const now = new Date();
-          const diffTime = Math.abs(now.getTime() - created.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          monthsActive = Math.max(1, Math.ceil(diffDays / 30));
-        }
-
-        faturamentoCents += monthlyEquivalent * monthsActive;
-      });
-
-      const proPlan = plans.find((pl) => pl.audience === "professional");
-      const compPlan = plans.find((pl) => pl.audience === "company");
-
-      setStats({
-        professionals: p.count ?? 0,
-        companies: c.count ?? 0,
-        jobs: j.count ?? 0,
-        courses: co.count ?? 0,
-        certificates: ce.count ?? 0,
-        enrollments: en.count ?? 0,
-        professionalPriceCents: proPlan?.price_cents ?? 2790,
-        companyPriceCents: compPlan?.price_cents ?? 29790,
-        activeSubscriptionsCount: activeProfiles.length,
-        experiencesCount: exp.count ?? 0,
-        realMonthlyRevenue: mrrCents / 100,
-        realTotalFaturamento: faturamentoCents / 100,
-      });
-
-      if (latestProfiles.data) {
-        setRecentUsers(
-          latestProfiles.data.map((u: any) => ({
-            id: u.id,
-            full_name: u.full_name || "Sem Nome",
-            role:
-              u.role === "company"
-                ? "Empresa"
-                : u.role === "professional"
-                ? "Profissional"
-                : "Admin",
-            created_at: u.created_at,
-            avatar_url: u.avatar_url,
-          }))
-        );
       }
 
-      setLoading(false);
-      setTimeout(() => setVisible(true), 50);
-    };
+      const monthlyEquivalent = isYearly ? Math.round(priceCents / 12) : priceCents;
+      mrrCents += monthlyEquivalent;
+
+      // Calculate active months since user was created
+      let monthsActive = 1;
+      if (prof.created_at) {
+        const created = new Date(prof.created_at);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - created.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        monthsActive = Math.max(1, Math.ceil(diffDays / 30));
+      }
+
+      faturamentoCents += monthlyEquivalent * monthsActive;
+    });
+
+    const proPlan = plans.find((pl) => pl.audience === "professional");
+    const compPlan = plans.find((pl) => pl.audience === "company");
+
+    setStats({
+      professionals: p.count ?? 0,
+      companies: c.count ?? 0,
+      jobs: j.count ?? 0,
+      courses: co.count ?? 0,
+      certificates: ce.count ?? 0,
+      enrollments: en.count ?? 0,
+      professionalPriceCents: proPlan?.price_cents ?? 2790,
+      companyPriceCents: compPlan?.price_cents ?? 29790,
+      activeSubscriptionsCount: activeProfiles.length,
+      experiencesCount: exp.count ?? 0,
+      realMonthlyRevenue: mrrCents / 100,
+      realTotalFaturamento: faturamentoCents / 100,
+    });
+
+    if (latestProfiles.data) {
+      setRecentUsers(
+        latestProfiles.data.map((u: any) => ({
+          id: u.id,
+          full_name: u.full_name || "Sem Nome",
+          role:
+            u.role === "company"
+              ? "Empresa"
+              : u.role === "professional"
+              ? "Profissional"
+              : "Admin",
+          created_at: u.created_at,
+          avatar_url: u.avatar_url,
+        }))
+      );
+    }
+
+    setLoading(false);
+    setRefreshing(false);
+    setTimeout(() => setVisible(true), 50);
+  };
+
+  useEffect(() => {
     load();
   }, []);
 
@@ -437,16 +443,17 @@ function AdminDashboard() {
             <span style={{ color: "oklch(0.7 0.01 270)" }}>Métricas em tempo real</span>
           </div>
           <button
-            onClick={() => window.location.reload()}
-            className="flex h-9 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all duration-200 hover:scale-[1.03] active:scale-95"
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="flex h-9 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all duration-200 hover:scale-[1.03] active:scale-95 disabled:opacity-70 disabled:pointer-events-none"
             style={{
               background: "linear-gradient(135deg, oklch(0.88 0.16 92), oklch(0.78 0.18 80))",
               color: "oklch(0.15 0.005 270)",
               boxShadow: "0 6px 20px -6px oklch(0.83 0.17 88 / 50%)",
             }}
           >
-            <Zap className="h-3.5 w-3.5" />
-            Atualizar dados
+            <Zap className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Atualizando..." : "Atualizar dados"}
           </button>
         </div>
       </div>

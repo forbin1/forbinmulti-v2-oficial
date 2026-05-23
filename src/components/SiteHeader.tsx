@@ -40,8 +40,8 @@ const NAV_PROFESSIONAL: NavItem[] = [
 
 const NAV_COMPANY: NavItem[] = [
   { to: "/empresa", label: "Painel Empresa" },
-  { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/vagas", label: "Vagas" },
+  { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/feed", label: "Experiências" },
   { to: "/favoritos", label: "Favoritos" },
 ];
@@ -51,8 +51,8 @@ const NAV_ADMIN: NavItem[] = [
   { to: "/empresa", label: "Painel Empresa" },
   { to: "/vagas", label: "Vagas" },
   { to: "/profissionais-ativos", label: "Profissionais" },
-  { to: "/feed", label: "Experiências" },
   { to: "/cursos", label: "Cursos" },
+  { to: "/feed", label: "Experiências" },
   { to: "/favoritos", label: "Favoritos" },
 ];
 
@@ -217,19 +217,21 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="shrink-0">
-          <Logo />
+      <div className="mx-auto flex h-20 max-w-[1440px] items-center gap-6 px-6 lg:px-12">
+        <Link to="/" className="shrink-0 transition-transform duration-300 hover:scale-[1.02]">
+          <Logo size={42} />
         </Link>
 
-        <nav className="ml-4 hidden items-center gap-1 lg:flex">
+        <nav className="ml-6 hidden items-center gap-2 lg:flex">
           {nav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              activeProps={{ className: "text-primary bg-accent/60" }}
+              activeProps={{
+                className: "text-primary bg-primary/5 border-primary/20 shadow-[0_0_12px_rgba(234,179,8,0.08)] font-semibold"
+              }}
               activeOptions={{ exact: item.to === "/" }}
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full border border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-all duration-300 hover:text-foreground hover:bg-accent/20 hover:scale-[1.02] active:scale-98"
             >
               {item.label}
             </Link>
@@ -242,10 +244,10 @@ export function SiteHeader() {
               setShowSearch(false);
             }
           }}>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors duration-300 group-focus-within:text-primary" />
             <Input
               placeholder="Buscar vagas, empresas, profissionais…"
-              className="h-11 w-72 rounded-full border-border/70 bg-surface pl-10 text-sm focus-visible:ring-primary/50"
+              className="h-11 w-72 rounded-full border-border/70 bg-surface pl-10 text-sm focus-visible:ring-primary/50 transition-all duration-300 focus:border-primary/40 focus:w-80 focus:shadow-[0_0_12px_rgba(234,179,8,0.08)]"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);

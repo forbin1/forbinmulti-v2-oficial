@@ -10,7 +10,28 @@ export const Route = createFileRoute("/admin")({
     ],
   }),
   beforeLoad: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let { data: { session } } = await supabase.auth.getSession();
+    
+    // Check if there is an active session in local storage to prevent premature redirects on hard refresh
+    const storageKeys = Object.keys(localStorage);
+    const hasAuthToken = storageKeys.some(key => key.startsWith("sb-") && key.endsWith("-auth-token"));
+    
+    if (!session && hasAuthToken) {
+      for (let i = 0; i < 20; i++) {
+        await new Promise(resolve => setTimeout(resolve, 40));
+        const res = await supabase.auth.getSession();
+        if (res.data.session) {
+          session = res.data.session;
+          break;
+        }
+      }
+    }
+
+    const user = session?.user ?? null;
     if (!user) throw redirect({ to: "/login" });
     if (user.email === "admin@gmail.com") return;
     const { data: roleRow } = await supabase
