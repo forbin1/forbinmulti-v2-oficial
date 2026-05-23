@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -29,13 +30,24 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useEffect } from "react";
 
-export const Route = createFileRoute("/vagas/$jobId")({
-  loader: async ({ params }) => {
-    const { data, error } = await supabase
+const fetchJobDetailFromServer = createServerFn({ method: "GET" })
+  .validator((jobId: string) => jobId)
+  .handler(async ({ data: jobId }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    const { data, error } = await supabaseAdmin
       .from("jobs")
       .select("*, companies(*), applications(count)")
-      .eq("id", params.jobId)
+      .eq("id", jobId)
       .maybeSingle();
+
+    if (error || !data) return null;
+    return data;
+  });
+
+export const Route = createFileRoute("/vagas/$jobId")({
+  loader: async ({ params }) => {
+    const data = await fetchJobDetailFromServer({ data: params.jobId });
 
     if (!data) throw notFound();
 
@@ -62,7 +74,7 @@ export const Route = createFileRoute("/vagas/$jobId")({
       cover: data.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
       companyUserId: data.companies?.user_id
     } as any;
-    if (!job) throw notFound();
+
     return { job };
   },
   head: ({ loaderData }) => ({

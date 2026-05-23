@@ -20,18 +20,28 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/vagas-hero.jpg";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
+let cachedJobs: any[] | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 15000; // 15 seconds server-side cache
+
 const fetchJobsFromServer = createServerFn({ method: "GET" }).handler(async () => {
+  const now = Date.now();
+  if (cachedJobs && (now - lastFetchTime < CACHE_TTL)) {
+    return cachedJobs;
+  }
+
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   
   const { data, error } = await supabaseAdmin
     .from("jobs")
     .select("id, title, city, state, contract_type, modality, salary_min, salary_max, requirements, banner_url, created_at, companies(company_name, logo_url, username), applications(count)")
     .eq("is_published", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  if (error || !data) return [];
+  if (error || !data) return cachedJobs || [];
 
-  return data.map((j: any) => ({
+  const mapped = data.map((j: any) => ({
     id: j.id,
     title: j.title,
     company: j.companies?.company_name || "Empresa FORBIN",
@@ -53,8 +63,21 @@ const fetchJobsFromServer = createServerFn({ method: "GET" }).handler(async () =
     requirements: j.requirements ? j.requirements.split(",") : [],
     cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
   }));
+
+  cachedJobs = mapped;
+  lastFetchTime = now;
+  return mapped;
 });
+
 export const Route = createFileRoute("/vagas/")({
+  loader: async () => {
+    try {
+      return await fetchJobsFromServer();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
   head: () => ({
     meta: [
       { title: "Vagas — FORBIN MultiEmpresas" },
@@ -69,23 +92,16 @@ const TYPES = ["Todos", "CLT", "PJ", "Diária", "Temporário"] as const;
 
 function VagasPage() {
   const { user, loading } = useAuth();
+  const initialJobs = Route.useLoaderData();
   const [region, setRegion] = useState("Todas");
   const [query, setQuery] = useState("");
   const [type, setType] = useState<(typeof TYPES)[number]>("Todos");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [realJobs, setRealJobs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [realJobs, setRealJobs] = useState<any[]>(initialJobs || []);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const fetchInitial = async () => {
-      setIsLoading(true);
-      const jobs = await fetchJobsFromServer();
-      setRealJobs(jobs);
-      setIsLoading(false);
-    };
-    fetchInitial();
-
     const refreshJobs = async () => {
       const jobs = await fetchJobsFromServer();
       setRealJobs(jobs);
