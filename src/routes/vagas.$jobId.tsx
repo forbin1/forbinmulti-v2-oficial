@@ -31,7 +31,6 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useEffect } from "react";
 
 const fetchJobDetailFromServer = createServerFn({ method: "GET" })
-  .validator((jobId: string) => jobId)
   .handler(async ({ data: jobId }) => {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
