@@ -106,7 +106,7 @@ function RootComponent() {
       <div className={`flex min-h-screen flex-col bg-background text-foreground ${!hideChrome ? "pb-16 lg:pb-0" : ""}`}>
         {!hideChrome && <SiteHeader />}
         <ExpiredBanner />
-        <main key={pathname} className="flex-1 animate-page-transition">
+        <main className="flex-1">
           <Outlet />
         </main>
         {!hideChrome && <SiteFooter />}
