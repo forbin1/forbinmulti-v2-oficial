@@ -33,16 +33,24 @@ import { useEffect } from "react";
 const fetchJobDetailFromServer = createServerFn({ method: "GET" })
   .validator((jobId: string) => jobId)
   .handler(async ({ data: jobId }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    
-    const { data, error } = await supabaseAdmin
-      .from("jobs")
-      .select("*, companies(*), applications(count)")
-      .eq("id", jobId)
-      .maybeSingle();
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      
+      const { data, error } = await supabaseAdmin
+        .from("jobs")
+        .select("*, companies(*), applications(count)")
+        .eq("id", jobId)
+        .maybeSingle();
 
-    if (error || !data) return null;
-    return data;
+      if (error) {
+        console.error("Database query error in fetchJobDetailFromServer:", error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error("Unhandled error in fetchJobDetailFromServer:", err);
+      return null;
+    }
   });
 
 export const Route = createFileRoute("/vagas/$jobId")({
