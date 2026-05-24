@@ -37,7 +37,7 @@ export function SiteFooter() {
             Contato
           </h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>contato@forbin.com.br</li>
+            <li>multiempresas@forbin.com.br</li>
             <li>Brasil — 24h</li>
           </ul>
         </div>
@@ -55,7 +55,7 @@ export function SiteFooter() {
             className="inline-flex items-center transition-opacity opacity-60 hover:opacity-100"
           >
             <img
-              src="https://wuarslrenynwiflzgrjp.supabase.co/storage/v1/object/public/landing/LOGO-THUNDER.png"
+              src="https://wuarslrenynwiflzgrjp.supabase.co/storage/v1/object/public/landing/logotipo-thunder.png"
               alt="Thunder Agency"
               className="h-4.5 w-auto object-contain"
               style={{ filter: "brightness(0) invert(0.65)" }}
