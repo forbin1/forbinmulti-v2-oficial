@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/60 bg-background">
@@ -47,10 +48,18 @@ export function SiteFooter() {
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground transition-colors duration-300">
           <span>desenvolvido com 💛 por</span>
-          <svg className="h-5 w-auto text-primary fill-current" viewBox="0 0 100 100" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-            <path d="M 25 10 L 90 10 L 75 30 L 10 30 Z" />
-            <path d="M 38 30 L 62 30 L 52 52 L 72 52 L 32 90 L 48 52 L 28 52 Z" />
-          </svg>
+          <a
+            href="https://thunderagency.com.br"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center opacity-70 hover:opacity-100 transition-opacity"
+          >
+            <img
+              src="https://wuarslrenynwiflzgrjp.supabase.co/storage/v1/object/public/landing/LOGO-THUNDER.png"
+              alt="Thunder Agency"
+              className="h-5 w-auto object-contain"
+            />
+          </a>
         </div>
       </div>
     </footer>
