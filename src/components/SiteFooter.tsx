@@ -57,8 +57,8 @@ export function SiteFooter() {
             <img
               src="https://wuarslrenynwiflzgrjp.supabase.co/storage/v1/object/public/landing/LOGO-THUNDER.png"
               alt="Thunder Agency"
-              className="h-3.5 w-auto object-contain"
-              style={{ filter: "brightness(0.8)" }}
+              className="h-4.5 w-auto object-contain"
+              style={{ filter: "brightness(0) invert(0.65)" }}
             />
           </a>
         </div>
