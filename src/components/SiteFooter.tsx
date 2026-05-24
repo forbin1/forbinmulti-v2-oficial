@@ -46,18 +46,19 @@ export function SiteFooter() {
         <div>
           © {new Date().getFullYear()} FORBIN MultiEmpresas. Todos os direitos reservados.
         </div>
-        <div className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground transition-colors duration-300">
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60 transition-colors duration-300">
           <span>desenvolvido com 💛 por</span>
           <a
             href="https://thunderagency.com.br"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center opacity-70 hover:opacity-100 transition-opacity"
+            className="inline-flex items-center transition-opacity opacity-60 hover:opacity-100"
           >
             <img
               src="https://wuarslrenynwiflzgrjp.supabase.co/storage/v1/object/public/landing/LOGO-THUNDER.png"
               alt="Thunder Agency"
-              className="h-5 w-auto object-contain"
+              className="h-3.5 w-auto object-contain"
+              style={{ filter: "brightness(0.8)" }}
             />
           </a>
         </div>
