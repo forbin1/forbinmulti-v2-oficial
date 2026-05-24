@@ -66,6 +66,7 @@ function PerfilProfissional() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
   const [coursesCount, setCoursesCount] = useState<number>(0);
+  const [userCourses, setUserCourses] = useState<{ title: string; source: 'profile' | 'certificate' | 'online' }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   
@@ -94,13 +95,13 @@ function PerfilProfissional() {
         .eq("user_id", user.id)
         .not("completed_at", "is", null);
 
-      const uniqueTitles = new Set<string>();
+      const coursesMap = new Map<string, 'profile' | 'certificate' | 'online'>();
 
       // Add profile courses
       if (profData?.courses && Array.isArray(profData.courses)) {
         profData.courses.forEach((c: any) => {
           if (typeof c === "string" && c.trim()) {
-            uniqueTitles.add(c.trim().toLowerCase());
+            coursesMap.set(c.trim().toLowerCase(), 'profile');
           }
         });
       }
@@ -109,7 +110,7 @@ function PerfilProfissional() {
       if (certData) {
         certData.forEach((c: any) => {
           if (c.name && typeof c.name === "string" && c.name.trim()) {
-            uniqueTitles.add(c.name.trim().toLowerCase());
+            coursesMap.set(c.name.trim().toLowerCase(), 'certificate');
           }
         });
       }
@@ -119,12 +120,22 @@ function PerfilProfissional() {
         enrollData.forEach((e: any) => {
           const title = e.courses?.title;
           if (title && typeof title === "string" && title.trim()) {
-            uniqueTitles.add(title.trim().toLowerCase());
+            coursesMap.set(title.trim().toLowerCase(), 'online');
           }
         });
       }
 
-      setCoursesCount(uniqueTitles.size);
+      const list = Array.from(coursesMap.entries()).map(([lowercased, source]) => {
+        const original = COURSES.find(c => c.toLowerCase() === lowercased) || 
+                         lowercased.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        return {
+          title: original,
+          source
+        };
+      });
+
+      setUserCourses(list);
+      setCoursesCount(list.length);
     } catch (err) {
       console.error("Error loading courses count:", err);
     }
@@ -303,6 +314,42 @@ function PerfilProfissional() {
                   <p className="leading-relaxed text-muted-foreground whitespace-pre-wrap">
                     {profile.bio || "Nenhum resumo cadastrado."}
                   </p>
+                </Card>
+
+                <Card title="Cursos & Formações">
+                  {userCourses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum curso cadastrado ou concluído ainda.</p>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {userCourses.map((c) => (
+                        <div key={c.title} className="flex items-center justify-between rounded-xl border border-white/5 bg-card/60 p-3.5 backdrop-blur-md hover:border-primary/20 hover:bg-primary/5 transition-all duration-300">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                              <GraduationCap className="h-5 w-5" />
+                            </div>
+                            <span className="font-semibold text-sm">{c.title}</span>
+                          </div>
+                          <div className="shrink-0">
+                            {c.source === 'online' && (
+                              <Badge className="rounded-full border-primary/40 bg-primary/20 text-primary px-2.5 py-0.5 text-[10px] font-bold shadow-gold">
+                                <Star className="mr-1 h-2.5 w-2.5 fill-primary text-primary animate-pulse" /> Online
+                              </Badge>
+                            )}
+                            {c.source === 'certificate' && (
+                              <Badge className="rounded-full border-success/40 bg-success/20 text-success px-2.5 py-0.5 text-[10px] font-bold">
+                                <ShieldCheck className="mr-1 h-2.5 w-2.5" /> Validado
+                              </Badge>
+                            )}
+                            {c.source === 'profile' && (
+                              <Badge variant="outline" className="rounded-full border-muted-foreground/30 bg-muted/5 text-muted-foreground px-2.5 py-0.5 text-[10px] font-medium">
+                                Declarado
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </Card>
               </TabsContent>
 
