@@ -47,9 +47,9 @@ export function SiteFooter() {
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground transition-colors duration-300">
           <span>desenvolvido com 💛 por</span>
-          <svg className="h-3 w-auto text-primary fill-current" viewBox="0 0 230 100" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-            <path d="M 35 10 L 225 10 L 195 32 L 5 32 Z" />
-            <path d="M 75 32 L 135 32 L 100 54 L 130 54 L 73 90 L 70 54 L 40 54 Z" fillRule="evenodd" />
+          <svg className="h-5 w-auto text-primary fill-current" viewBox="0 0 100 100" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+            <path d="M 25 10 L 90 10 L 75 30 L 10 30 Z" />
+            <path d="M 38 30 L 62 30 L 52 52 L 72 52 L 32 90 L 48 52 L 28 52 Z" />
           </svg>
         </div>
       </div>
