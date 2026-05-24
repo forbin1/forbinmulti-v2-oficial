@@ -129,10 +129,34 @@ function JobDetail() {
   const [open, setOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showFloating, setShowFloating] = useState(false);
   const gate = useAuthGate();
   const { user, role } = useAuth();
   const { isActive } = useSubscription();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (typeof window === "undefined") return;
+      const scrollY = window.scrollY;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+
+      // Show after scrolling 150px down, hide when near the bottom static apply card
+      const isNearTop = scrollY < 150;
+      const isNearBottom = scrollHeight - scrollY - clientHeight < 450;
+
+      if (isNearTop || isNearBottom) {
+        setShowFloating(false);
+      } else {
+        setShowFloating(true);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (user && role === "professional") {
@@ -387,7 +411,11 @@ function JobDetail() {
       </div>
 
       {/* Premium Framer-style Floating Bottom Apply Bar for Mobile */}
-      <div className="fixed bottom-20 left-4 right-4 z-40 flex max-w-lg items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-card/85 p-3 shadow-2xl shadow-primary/5 backdrop-blur-xl lg:hidden animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out mx-auto">
+      <div className={`fixed bottom-20 left-4 right-4 z-40 flex max-w-lg items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-card/85 p-3 shadow-2xl shadow-primary/5 backdrop-blur-xl lg:hidden transition-all duration-500 ease-out mx-auto ${
+        showFloating 
+          ? "translate-y-0 opacity-100" 
+          : "translate-y-28 opacity-0 pointer-events-none"
+      }`}>
         <div className="min-w-0 flex-1 pl-1">
           <p className="truncate text-xs font-semibold text-muted-foreground">{job.company}</p>
           <p className="truncate text-sm font-bold text-foreground mt-0.5">{job.title}</p>
