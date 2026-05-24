@@ -129,7 +129,8 @@ function JobDetail() {
   const [open, setOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [showFloating, setShowFloating] = useState(false);
+  const [isStaticVisible, setIsStaticVisible] = useState(false);
+  const [isNearTop, setIsNearTop] = useState(true);
   const gate = useAuthGate();
   const { user, role } = useAuth();
   const { isActive } = useSubscription();
@@ -138,25 +139,35 @@ function JobDetail() {
   useEffect(() => {
     const handleScroll = () => {
       if (typeof window === "undefined") return;
-      const scrollY = window.scrollY;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = window.innerHeight;
-
-      // Show after scrolling 150px down, hide when near the bottom static apply card
-      const isNearTop = scrollY < 150;
-      const isNearBottom = scrollHeight - scrollY - clientHeight < 450;
-
-      if (isNearTop || isNearBottom) {
-        setShowFloating(false);
-      } else {
-        setShowFloating(true);
-      }
+      setIsNearTop(window.scrollY < 120);
     };
+
+    const target = document.getElementById("static-apply-card");
+    let observer: IntersectionObserver | null = null;
+
+    if (target) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          setIsStaticVisible(entry.isIntersecting);
+        },
+        {
+          threshold: 0,
+          rootMargin: "100px 0px 0px 0px" // Detect slightly before it enters viewport
+        }
+      );
+      observer.observe(target);
+    }
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (observer) observer.disconnect();
+    };
   }, []);
+
+  const showFloating = !isNearTop && !isStaticVisible;
 
   useEffect(() => {
     if (user && role === "professional") {
@@ -329,7 +340,7 @@ function JobDetail() {
 
         {/* Sidebar — candidatura */}
         <aside className="space-y-4">
-          <div className="sticky top-28 rounded-3xl border border-primary/40 bg-card p-6 shadow-gold">
+          <div id="static-apply-card" className="sticky top-28 rounded-3xl border border-primary/40 bg-card p-6 shadow-gold">
             <p className="text-sm text-muted-foreground">Status</p>
             <div className="mt-1 flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
