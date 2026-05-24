@@ -236,7 +236,7 @@ function JobDetail() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-10 pb-32 sm:px-6 sm:pb-10 lg:px-8">
         <Link to="/vagas" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Voltar para vagas
         </Link>
@@ -384,6 +384,37 @@ function JobDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
+
+      {/* Premium Framer-style Floating Bottom Apply Bar for Mobile */}
+      <div className="fixed bottom-20 left-4 right-4 z-40 flex max-w-lg items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-card/85 p-3 shadow-2xl shadow-primary/5 backdrop-blur-xl lg:hidden animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out mx-auto">
+        <div className="min-w-0 flex-1 pl-1">
+          <p className="truncate text-xs font-semibold text-muted-foreground">{job.company}</p>
+          <p className="truncate text-sm font-bold text-foreground mt-0.5">{job.title}</p>
+          <p className="text-xs font-semibold text-primary mt-0.5">{job.salary}</p>
+        </div>
+        
+        {applied ? (
+          <div className="flex h-11 items-center gap-1.5 rounded-xl border border-success/30 bg-success/15 px-4 text-xs font-bold text-success animate-in fade-in zoom-in-95 duration-300">
+            <CheckCircle2 className="h-4 w-4" /> Enviada
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              if (user && role !== "professional") {
+                toast.error("Apenas profissionais de segurança podem se candidatar às vagas!", {
+                  description: "Empresas e administradores não possuem currículos profissionais ativos."
+                });
+                return;
+              }
+              gate(() => setOpen(true), "Faça login para se candidatar");
+            }}
+            className="relative flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-amber-500 px-5 text-sm font-bold text-black shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shrink-0"
+          >
+            <Send className="h-4 w-4 text-black animate-pulse" />
+            Candidatar-se
+          </button>
+        )}
       </div>
     </div>
   );
