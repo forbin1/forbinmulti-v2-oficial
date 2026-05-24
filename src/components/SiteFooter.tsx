@@ -49,7 +49,7 @@ export function SiteFooter() {
           <span>desenvolvido com 💛 por</span>
           <svg className="h-3 w-auto text-primary fill-current" viewBox="0 0 230 100" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
             <path d="M 35 10 L 225 10 L 195 32 L 5 32 Z" />
-            <path d="M 70 32 L 150 32 L 110 54 L 145 54 L 72 90 L 98 44 L 82 44 Z" />
+            <path d="M 75 32 L 135 32 L 100 54 L 130 54 L 73 90 L 70 54 L 40 54 Z" fillRule="evenodd" />
           </svg>
         </div>
       </div>
