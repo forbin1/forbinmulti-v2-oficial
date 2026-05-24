@@ -63,19 +63,82 @@ function PerfilProfissional() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
+  const [coursesCount, setCoursesCount] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   
   const { posts: allPosts } = usePosts();
 
+  const loadCoursesCount = async () => {
+    if (!user) return;
+    try {
+      // 1. Get courses from user profile
+      const { data: profData } = await supabase
+        .from("profiles")
+        .select("courses")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // 2. Get user certificates (issued by admin or loaded)
+      const { data: certData } = await supabase
+        .from("user_certificates")
+        .select("name")
+        .eq("user_id", user.id);
+
+      // 3. Get completed online courses (completed_at is not null)
+      const { data: enrollData } = await supabase
+        .from("enrollments")
+        .select("course_id, courses(title)")
+        .eq("user_id", user.id)
+        .not("completed_at", "is", null);
+
+      const uniqueTitles = new Set<string>();
+
+      // Add profile courses
+      if (profData?.courses && Array.isArray(profData.courses)) {
+        profData.courses.forEach((c: any) => {
+          if (typeof c === "string" && c.trim()) {
+            uniqueTitles.add(c.trim().toLowerCase());
+          }
+        });
+      }
+
+      // Add user certificates
+      if (certData) {
+        certData.forEach((c: any) => {
+          if (c.name && typeof c.name === "string" && c.name.trim()) {
+            uniqueTitles.add(c.name.trim().toLowerCase());
+          }
+        });
+      }
+
+      // Add completed online courses
+      if (enrollData) {
+        enrollData.forEach((e: any) => {
+          const title = e.courses?.title;
+          if (title && typeof title === "string" && title.trim()) {
+            uniqueTitles.add(title.trim().toLowerCase());
+          }
+        });
+      }
+
+      setCoursesCount(uniqueTitles.size);
+    } catch (err) {
+      console.error("Error loading courses count:", err);
+    }
+  };
+
   const loadProfile = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      loadCoursesCount()
+    ]);
     
     if (data) setProfile(data as Profile);
     setLoading(false);
@@ -216,7 +279,7 @@ function PerfilProfissional() {
 
           {/* Stats */}
           <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-5 text-center sm:grid-cols-4">
-            <Stat label="Cursos" value="—" />
+            <Stat label="Cursos" value={String(coursesCount)} />
             <Stat label="Experiência" value={profile.experience_years ? `${profile.experience_years}a` : "—"} />
             <Stat label="Postos" value="—" />
             <Stat label="Avaliação" value="5.0 ★" />

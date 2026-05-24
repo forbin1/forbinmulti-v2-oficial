@@ -35,6 +35,11 @@ function CadastroProfissional() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("SP");
+  const [bio, setBio] = useState("");
 
   // Step 1 - Account
   const [email, setEmail] = useState("");
@@ -59,7 +64,7 @@ function CadastroProfissional() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -74,6 +79,9 @@ function CadastroProfissional() {
       toast.error(error.message);
       return;
     }
+    if (data?.user?.id) {
+      setUserId(data.user.id);
+    }
     toast.success("Conta criada! Verifique seu email para confirmar o cadastro.");
     setStep(2);
   };
@@ -86,9 +94,34 @@ function CadastroProfissional() {
     setStep((s) => Math.min(STEPS.length, s + 1));
   };
 
-  const handleFinish = () => {
-    toast.success("Cadastro finalizado com sucesso!");
-    navigate({ to: "/login" });
+  const handleFinish = async () => {
+    setLoading(true);
+    try {
+      if (userId) {
+        // Save form values to Supabase profiles table
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            phone: phone || null,
+            whatsapp: phone || null,
+            city: city || null,
+            state: state || null,
+            courses: selectedCourses,
+            bio: bio || null,
+          })
+          .eq("user_id", userId);
+          
+        if (error) {
+          console.error("Error saving profile details:", error);
+        }
+      }
+    } catch (err) {
+      console.error("Error in handleFinish:", err);
+    } finally {
+      setLoading(false);
+      toast.success("Cadastro finalizado com sucesso!");
+      navigate({ to: "/login" });
+    }
   };
 
   return (
@@ -200,7 +233,7 @@ function CadastroProfissional() {
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="CPF"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="000.000.000-00" /></Field>
               <Field label="Data de nascimento"><Input type="date" className="h-12 rounded-xl bg-surface text-base" /></Field>
-              <Field label="Telefone / WhatsApp"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="(11) 99999-0000" /></Field>
+              <Field label="Telefone / WhatsApp"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="(11) 99999-0000" /></Field>
               <Field label="Estado civil">
                 <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
                   <option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option>
@@ -224,11 +257,15 @@ function CadastroProfissional() {
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="CEP"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="00000-000" /></Field>
               <Field label="Estado">
-                <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
-                  <option>SP</option><option>RJ</option><option>MG</option><option>PR</option><option>SC</option>
+                <select value={state} onChange={(e) => setState(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
+                  <option value="SP">SP</option>
+                  <option value="RJ">RJ</option>
+                  <option value="MG">MG</option>
+                  <option value="PR">PR</option>
+                  <option value="SC">SC</option>
                 </select>
               </Field>
-              <Field label="Cidade"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="São Paulo" /></Field>
+              <Field label="Cidade"><Input value={city} onChange={(e) => setCity(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="São Paulo" /></Field>
               <Field label="Bairro"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="Centro" /></Field>
               <div className="sm:col-span-2">
                 <Field label="Endereço completo"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="Rua, número, complemento" /></Field>
@@ -274,7 +311,7 @@ function CadastroProfissional() {
             </div>
 
             <Field label="Resumo profissional">
-              <Textarea rows={4} className="rounded-xl bg-surface text-base" placeholder="Conte um pouco sobre sua experiência, anos de atuação, especialidades..." />
+              <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} className="rounded-xl bg-surface text-base" placeholder="Conte um pouco sobre sua experiência, anos de atuação, especialidades..." />
             </Field>
           </div>
         )}
