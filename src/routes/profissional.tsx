@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { POSTS } from "@/data/mock";
+import { POSTS, COURSES } from "@/data/mock";
 import { MentionText } from "@/components/MentionText";
 import { toast } from "sonner";
 import { usePosts, createPost, deletePost } from "@/hooks/use-posts";
@@ -55,6 +55,8 @@ type Profile = {
   instagram_url: string | null;
   website_url: string | null;
   is_verified: boolean;
+  courses: string[] | null;
+  specializations: string[] | null;
 };
 
 function PerfilProfissional() {
@@ -281,7 +283,7 @@ function PerfilProfissional() {
           <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-5 text-center sm:grid-cols-4">
             <Stat label="Cursos" value={String(coursesCount)} />
             <Stat label="Experiência" value={profile.experience_years ? `${profile.experience_years}a` : "—"} />
-            <Stat label="Postos" value="—" />
+            <Stat label="Postos" value={profile.specializations?.[1] || "0"} />
             <Stat label="Avaliação" value="5.0 ★" />
           </div>
         </div>
@@ -325,7 +327,7 @@ function PerfilProfissional() {
               <div className="space-y-3 text-sm font-medium">
                 <Row label="Função" value={profile.role || "Não informada"} />
                 <Row label="Região" value={profile.city ? `${profile.city}, ${profile.state}` : "Não informada"} />
-                <Row label="Status" value="Disponível para propostas" />
+                <Row label="Status" value={profile.specializations?.[0] || "Disponível para propostas"} />
                 <div className="mt-4 pt-4 border-t border-white/5">
                    <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary font-bold hover:bg-primary/10" onClick={() => setIsEditing(true)}>
                      <Pencil className="mr-2 h-3 w-3" /> Editar Disponibilidade
@@ -357,9 +359,17 @@ function PerfilProfissional() {
 
 function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean; profile: Profile; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<Partial<Profile>>(profile);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [status, setStatus] = useState<string>("Disponível para propostas");
+  const [postos, setPostos] = useState<string>("0");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setForm(profile); }, [profile, open]);
+  useEffect(() => {
+    setForm(profile);
+    setSelectedCourses(profile.courses || []);
+    setStatus(profile.specializations?.[0] || "Disponível para propostas");
+    setPostos(profile.specializations?.[1] || "0");
+  }, [profile, open]);
 
   const save = async () => {
     setSaving(true);
@@ -377,6 +387,8 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
         linkedin_url: form.linkedin_url,
         instagram_url: form.instagram_url,
         website_url: form.website_url,
+        courses: selectedCourses,
+        specializations: [status, postos],
       })
       .eq("user_id", profile.user_id);
 
@@ -397,7 +409,7 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
             <Input value={form.full_name ?? ""} onChange={(e) => setForm({...form, full_name: e.target.value})} />
           </div>
           <div>
-            <Label>Cargo / Especialidade</Label>
+            <Label>Cargo / Especialidade (Função)</Label>
             <Input value={form.role ?? ""} onChange={(e) => setForm({...form, role: e.target.value})} placeholder="Ex: Vigilante Líder" />
           </div>
           <div>
@@ -405,7 +417,7 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
             <Input type="number" value={form.experience_years ?? 0} onChange={(e) => setForm({...form, experience_years: Number(e.target.value)})} />
           </div>
           <div>
-            <Label>Cidade</Label>
+            <Label>Cidade (Região)</Label>
             <Input value={form.city ?? ""} onChange={(e) => setForm({...form, city: e.target.value})} />
           </div>
           <div>
@@ -420,9 +432,54 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
             <Label>LinkedIn (URL)</Label>
             <Input value={form.linkedin_url ?? ""} onChange={(e) => setForm({...form, linkedin_url: e.target.value})} />
           </div>
+          <div>
+            <Label>Status de Disponibilidade</Label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="Disponível para propostas">Disponível para propostas</option>
+              <option value="Contratado">Contratado</option>
+              <option value="Em treinamento">Em treinamento</option>
+              <option value="Indisponível">Indisponível</option>
+            </select>
+          </div>
+          <div>
+            <Label>Quantidade de Postos Atendidos</Label>
+            <Input
+              type="number"
+              value={postos}
+              onChange={(e) => setPostos(e.target.value)}
+              placeholder="Ex: 5"
+            />
+          </div>
           <div className="sm:col-span-2">
             <Label>Bio / Resumo Profissional</Label>
             <Textarea rows={4} value={form.bio ?? ""} onChange={(e) => setForm({...form, bio: e.target.value})} />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="mb-2 block text-sm font-semibold text-primary">Meus Cursos & Formações</Label>
+            <div className="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto border border-border/60 rounded-xl p-3 bg-surface/50">
+              {COURSES.map((c) => {
+                const active = selectedCourses.includes(c);
+                return (
+                  <label key={c} className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors py-1">
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => {
+                        setSelectedCourses(prev =>
+                          prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
+                        );
+                      }}
+                      className="rounded border-border bg-surface text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>{c}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </div>
         <DialogFooter>
