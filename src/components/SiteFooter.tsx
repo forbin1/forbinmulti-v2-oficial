@@ -41,8 +41,17 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} FORBIN MultiEmpresas. Todos os direitos reservados.
+      <div className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+        <div>
+          © {new Date().getFullYear()} FORBIN MultiEmpresas. Todos os direitos reservados.
+        </div>
+        <div className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground transition-colors duration-300">
+          <span>desenvolvido com 💛 por</span>
+          <svg className="h-3 w-auto text-primary fill-current" viewBox="0 0 230 100" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+            <path d="M 35 10 L 225 10 L 195 32 L 5 32 Z" />
+            <path d="M 70 32 L 150 32 L 110 54 L 145 54 L 72 90 L 98 44 L 82 44 Z" />
+          </svg>
+        </div>
       </div>
     </footer>
   );
