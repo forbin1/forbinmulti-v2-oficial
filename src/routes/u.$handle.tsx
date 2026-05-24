@@ -9,6 +9,7 @@ import {
   Camera,
   ShieldCheck,
   Building2,
+  Loader2,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { findProfileByHandle } from "@/data/profiles";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/u/$handle")({
   head: ({ params }) => ({
@@ -34,34 +36,88 @@ const AVATAR_KEY = (h: string) => `forbin:avatar:${h}`;
 function PerfilUsuario() {
   const { handle } = Route.useParams();
   const navigate = useNavigate();
-  const profile = findProfileByHandle(handle);
   const { isFavorite, toggle } = useFavorites();
   const { user } = useAuth();
 
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [cover, setCover] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
   const coverInput = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!profile) return;
-    setCover(localStorage.getItem(COVER_KEY(profile.handle)));
-    setAvatar(localStorage.getItem(AVATAR_KEY(profile.handle)));
-  }, [profile]);
+    const mock = findProfileByHandle(handle);
+    if (mock) {
+      setProfile(mock);
+      setCover(localStorage.getItem(COVER_KEY(mock.handle)) || null);
+      setAvatar(localStorage.getItem(AVATAR_KEY(mock.handle)) || null);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      (async () => {
+        try {
+          let query = supabase.from("profiles").select("*");
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handle);
+          
+          if (isUuid) {
+            query = query.eq("user_id", handle);
+          } else {
+            query = query.ilike("full_name", `%${handle}%`);
+          }
+          
+          const { data, error } = await query.maybeSingle();
+          if (data) {
+            const initials = data.full_name.split(" ").map((n: any) => n[0]).join("").slice(0, 2).toUpperCase();
+            setProfile({
+              id: data.user_id,
+              handle: handle,
+              name: data.full_name,
+              role: data.role || "Profissional de Segurança",
+              kind: "professional",
+              initials,
+              location: data.city ? `${data.city}, ${data.state}` : undefined,
+              whatsapp: data.phone || undefined,
+              bio: data.bio || undefined,
+              coursesCount: data.courses?.length || 0,
+              experience_years: data.experience_years || 0,
+              specializations: data.specializations || [],
+            });
+            setCover(data.cover_url || null);
+            setAvatar(data.avatar_url || null);
+          } else {
+            setProfile(null);
+          }
+        } catch (err) {
+          console.error("Error loading db profile:", err);
+          setProfile(null);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [handle]);
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
         <h1 className="font-display text-2xl font-bold">Perfil não encontrado</h1>
-        <p className="mt-2 text-muted-foreground">O usuário @{handle} não existe.</p>
+        <p className="mt-2 text-muted-foreground">O usuário @{handle} não existe ou não foi encontrado.</p>
         <Button asChild className="mt-6 rounded-full"><Link to="/feed">Voltar ao feed</Link></Button>
       </div>
     );
   }
 
-  // No mock, consideramos "dono" se o user logado tiver o handle no metadata.
-  const isOwner =
-    !!user && (user.user_metadata?.handle === profile.handle || user.email?.split("@")[0] === profile.handle);
+  // No mock ou banco, consideramos "dono" se o user logado for o mesmo do id/handle.
+  const isOwner = !!user && (user.id === profile.id || user.user_metadata?.handle === profile.handle || user.email?.split("@")[0] === profile.handle);
 
   const fav = isFavorite(profile.id, profile.kind);
 
@@ -75,19 +131,19 @@ function PerfilUsuario() {
       localStorage.setItem(key, dataUrl);
       if (kind === "cover") setCover(dataUrl);
       else setAvatar(dataUrl);
-      toast.success(kind === "cover" ? "Capa atualizada" : "Foto de perfil atualizada");
+      toast.success(kind === "cover" ? "Capa atualizada" : "Foto de perfil updated!");
     };
     reader.readAsDataURL(file);
   };
 
-  // Postos atendidos = vagas aprovadas pela empresa (mock por handle)
+  // Stats dinâmicos do banco de dados
   const POSTOS_BY_HANDLE: Record<string, number> = {
     "carlos.silva": 23, "renata.oliveira": 11, "marcos.tavares": 34,
     "julia.santos": 17, "pedro.almeida": 8, "ana.costa": 41, "carlos.mendes": 30,
   };
-  const postos = POSTOS_BY_HANDLE[profile.handle] ?? 0;
-  const cursos = 5;
-  const anos = 8;
+  const postos = profile.specializations?.[1] || POSTOS_BY_HANDLE[profile.handle] || 0;
+  const cursos = profile.coursesCount !== undefined ? profile.coursesCount : 5;
+  const anos = profile.experience_years !== undefined ? profile.experience_years : 8;
 
   return (
     <div className="pb-12">

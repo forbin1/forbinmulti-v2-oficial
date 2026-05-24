@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
+import { PROFILES } from "@/data/profiles";
 import { useEffect, useState, useRef } from "react";
 import {
   MapPin, Phone, Mail, ShieldCheck, Briefcase, Heart, MessageCircle, MoreHorizontal,
@@ -679,16 +680,38 @@ export function ComposeBox() {
   };
 
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
-      supabase.from("profiles").select("full_name, avatar_url, role").eq("user_id", user.id).maybeSingle().then(({ data }) => {
-        if (data) setProfile(data);
-      });
+      if (role === "company") {
+        supabase
+          .from("companies")
+          .select("company_name, logo_url")
+          .eq("user_id", user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) {
+              setProfile({
+                full_name: data.company_name,
+                avatar_url: data.logo_url,
+                role: "Empresa",
+              });
+            }
+          });
+      } else {
+        supabase
+          .from("profiles")
+          .select("full_name, avatar_url, role")
+          .eq("user_id", user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) setProfile(data);
+          });
+      }
     }
-  }, [user]);
+  }, [user, role]);
 
   const userName = profile?.full_name || user?.user_metadata?.full_name || "Membro FORBIN";
   const userRole = profile?.role || user?.user_metadata?.role || "Profissional";
@@ -771,12 +794,43 @@ export function ComposeBox() {
 
 export function PostCard({ post, owned = false }: { post: any; owned?: boolean }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [content, setContent] = useState(post.content);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.content);
   const [deleted, setDeleted] = useState(false);
   const [likes_count, setLikesCount] = useState(post.likes_count || 0);
   const [liked, setLiked] = useState(false);
+
+  const handleAuthorClick = async () => {
+    try {
+      const isCompany = post.author_role === "Empresa" || !post.profiles;
+      
+      if (isCompany) {
+        const { data: comp } = await supabase
+          .from("companies")
+          .select("username")
+          .eq("user_id", post.user_id)
+          .maybeSingle();
+          
+        if (comp?.username) {
+          navigate({ to: `/perfil/${comp.username}` as any });
+        } else {
+          const fallbackSlug = post.author_name.toLowerCase().replace(/[^a-z0-9]/g, "-");
+          navigate({ to: `/perfil/${fallbackSlug}` as any });
+        }
+      } else {
+        const mockProfile = PROFILES.find(p => p.id === post.user_id || p.name.toLowerCase() === post.author_name.toLowerCase());
+        if (mockProfile) {
+          navigate({ to: `/u/${mockProfile.handle}` as any });
+        } else {
+          navigate({ to: `/u/${post.user_id}` as any });
+        }
+      }
+    } catch (err) {
+      console.error("Error navigating to author profile:", err);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -837,15 +891,21 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
   return (
     <article className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6">
       <header className="flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground">
+        <div 
+          onClick={handleAuthorClick}
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-gold font-bold text-primary-foreground cursor-pointer hover:opacity-90 hover:scale-105 transition-all duration-300"
+        >
           {authorAvatar ? (
             <img src={authorAvatar} alt={authorName} className="h-full w-full object-cover" />
           ) : (
             authorName.charAt(0).toUpperCase()
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">{authorName}</p>
+        <div 
+          onClick={handleAuthorClick}
+          className="min-w-0 flex-1 cursor-pointer group"
+        >
+          <p className="font-semibold group-hover:text-primary transition-colors">{authorName}</p>
           <p className="truncate text-xs text-muted-foreground">
             {authorRole} · {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : "Agora"}
           </p>

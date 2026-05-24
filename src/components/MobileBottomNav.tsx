@@ -1,15 +1,33 @@
 import { Link } from "@tanstack/react-router";
 import { Compass, Briefcase, BookOpen, ClipboardList, User, FolderHeart } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function MobileBottomNav() {
   const { user, role } = useAuth();
+  const [companyUsername, setCompanyUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user && role === "company") {
+      supabase
+        .from("companies")
+        .select("username")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.username) {
+            setCompanyUsername(data.username);
+          }
+        });
+    }
+  }, [user, role]);
 
   // If not logged in, we still show the navigation to basic areas
   const profileLink = role === "admin" 
     ? "/admin" 
     : role === "company" 
-    ? "/empresa" 
+    ? (companyUsername ? `/perfil/${companyUsername}` : "/perfil-empresa")
     : role === "professional"
     ? "/profissional"
     : "/login";
