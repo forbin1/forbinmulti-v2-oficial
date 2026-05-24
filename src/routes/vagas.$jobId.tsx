@@ -41,15 +41,36 @@ const fetchJobDetailFromServer = createServerFn({ method: "GET" })
         .eq("id", jobId)
         .maybeSingle();
 
+      if (!error && data) {
+        return data;
+      }
       if (error) {
         console.error("Database query error in fetchJobDetailFromServer:", error);
-        return null;
       }
-      return data;
     } catch (err) {
       console.error("Unhandled error in fetchJobDetailFromServer:", err);
-      return null;
     }
+
+    // FALLBACK: Use the public supabase client (which uses the publishable/anon key)
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*, companies(*), applications(count)")
+        .eq("id", jobId)
+        .maybeSingle();
+
+      if (!error && data) {
+        return data;
+      }
+      if (error) {
+        console.error("Public client fallback query error:", error);
+      }
+    } catch (fallbackErr) {
+      console.error("Public client fallback unhandled error:", fallbackErr);
+    }
+
+    return null;
   });
 
 export const Route = createFileRoute("/vagas/$jobId")({
@@ -76,9 +97,9 @@ export const Route = createFileRoute("/vagas/$jobId")({
       posted: "Recém criada",
       applicants: data.applications?.[0]?.count || 0,
       description: data.description || "",
-      requirements: data.requirements ? data.requirements.split(",") : [],
-      benefits: data.benefits ? data.benefits.split(",") : [],
-      cover: data.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop",
+      requirements: data.requirements ? data.requirements.split(/[\n,;]+/).map((r: string) => r.trim()).filter(Boolean) : [],
+      benefits: data.benefits ? data.benefits.split(/[\n,;]+/).map((b: string) => b.trim()).filter(Boolean) : [],
+      cover: data.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=1200&h=675&fit=crop&auto=format",
       companyUserId: data.companies?.user_id
     } as any;
 
@@ -204,7 +225,13 @@ function JobDetail() {
       {/* Cover banner 16:9 */}
       <div className="relative w-full overflow-hidden">
         <div className="relative aspect-video max-h-[60vh] w-full">
-          <img src={job.cover} alt={job.title} className="h-full w-full object-cover" />
+          <img 
+            src={job.cover} 
+            alt={job.title} 
+            loading="eager"
+            fetchPriority="high"
+            className="h-full w-full object-cover" 
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         </div>
       </div>

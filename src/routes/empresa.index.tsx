@@ -15,6 +15,43 @@ export const Route = createFileRoute("/empresa/")({
   component: EmpresaDashboard,
 });
 
+function resizeImageBase64(base64Str: string, maxWidth: number, maxHeight: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+      }
+
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+}
+
 function EmpresaDashboard() {
   const { user } = useAuth();
   const [company, setCompany] = useState<any>(null);
@@ -380,39 +417,35 @@ function EmpresaDashboard() {
                 <Textarea value={benefits} onChange={(e) => setBenefits(e.target.value)} rows={2} placeholder="Ex: Vale refeição, vale transporte, plano de saúde..." className="bg-surface" />
               </div>
               <div className="sm:col-span-2 space-y-2">
-                <Label>Imagem / Banner da Vaga</Label>
-                <div className="flex gap-2">
-                  <Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="Cole o link de uma imagem (Unsplash, etc.)" className="bg-surface flex-1" />
-                  <Button type="button" variant="outline" onClick={() => {
-                    const randoms = [
-                      "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600",
-                      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=600",
-                      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=600",
-                      "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=600"
-                    ];
-                    setBannerUrl(randoms[Math.floor(Math.random() * randoms.length)]);
-                  }} className="shrink-0 rounded-xl">Sugestão</Button>
-                </div>
+                <Label>Foto de Capa da Vaga</Label>
                 <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 p-4 bg-surface/50">
-                  <Input type="file" accept="image/*" className="hidden" id="job-banner-upload" onChange={(e) => {
+                  <Input type="file" accept="image/*" className="hidden" id="job-banner-upload" onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
+                    
+                    toast.info("Processando e otimizando imagem...");
                     const reader = new FileReader();
-                    reader.onload = () => {
-                      setBannerUrl(reader.result as string);
-                      toast.success("Imagem carregada com sucesso!");
+                    reader.onload = async () => {
+                      let base64 = reader.result as string;
+                      try {
+                        base64 = await resizeImageBase64(base64, 1200, 600);
+                      } catch (resizeErr) {
+                        console.warn("Error resizing image:", resizeErr);
+                      }
+                      setBannerUrl(base64);
+                      toast.success("Foto de capa carregada!");
                     };
                     reader.readAsDataURL(file);
                   }} />
-                  <Label htmlFor="job-banner-upload" className="flex h-20 w-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
+                  <Label htmlFor="job-banner-upload" className="flex h-14 w-28 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
                     Selecionar Foto
                   </Label>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold">Selecione uma imagem de destaque</p>
-                    <p className="text-[10px] text-muted-foreground">Formatos suportados: PNG, JPG ou GIF. Máximo 5MB.</p>
+                    <p className="text-xs font-semibold">Carregar imagem de destaque</p>
+                    <p className="text-[10px] text-muted-foreground">PNG, JPG ou GIF. Comprimida automaticamente.</p>
                   </div>
                   {bannerUrl && (
-                    <div className="h-16 w-24 overflow-hidden rounded-lg border">
+                    <div className="h-14 w-24 overflow-hidden rounded-lg border">
                       <img src={bannerUrl} alt="Preview" className="h-full w-full object-cover" />
                     </div>
                   )}
@@ -490,21 +523,33 @@ function EmpresaDashboard() {
                   <Textarea value={editingJob.benefits || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, benefits: e.target.value }))} rows={2} className="bg-surface" />
                 </div>
                 <div className="sm:col-span-2 space-y-2">
-                  <Label>Banner da Vaga (URL ou upload)</Label>
-                  <div className="flex gap-2">
-                    <Input value={editingJob.banner_url || ""} onChange={(e) => setEditingJob((j: any) => ({ ...j, banner_url: e.target.value }))} placeholder="Cole um link ou selecione abaixo" className="bg-surface flex-1" />
-                  </div>
+                  <Label>Foto de Capa da Vaga</Label>
                   <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 p-3 bg-surface/50">
-                    <Input type="file" accept="image/*" className="hidden" id="edit-banner-upload" onChange={(e) => {
+                    <Input type="file" accept="image/*" className="hidden" id="edit-banner-upload" onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      
+                      toast.info("Processando e otimizando imagem...");
                       const reader = new FileReader();
-                      reader.onload = () => setEditingJob((j: any) => ({ ...j, banner_url: reader.result as string }));
+                      reader.onload = async () => {
+                        let base64 = reader.result as string;
+                        try {
+                          base64 = await resizeImageBase64(base64, 1200, 600);
+                        } catch (resizeErr) {
+                          console.warn("Error resizing image:", resizeErr);
+                        }
+                        setEditingJob((j: any) => ({ ...j, banner_url: base64 }));
+                        toast.success("Foto de capa carregada!");
+                      };
                       reader.readAsDataURL(file);
                     }} />
-                    <Label htmlFor="edit-banner-upload" className="flex h-14 w-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
-                      Selecionar
+                    <Label htmlFor="edit-banner-upload" className="flex h-14 w-28 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10">
+                      Selecionar Foto
                     </Label>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold">Carregar imagem de destaque</p>
+                      <p className="text-[10px] text-muted-foreground">PNG, JPG ou GIF. Comprimida automaticamente.</p>
+                    </div>
                     {editingJob.banner_url && (
                       <div className="h-14 w-24 overflow-hidden rounded-lg border">
                         <img src={editingJob.banner_url} alt="Preview" className="h-full w-full object-cover" />

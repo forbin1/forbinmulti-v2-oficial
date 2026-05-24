@@ -8,7 +8,7 @@ import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useAuth } from "@/hooks/use-auth";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +34,6 @@ const NAV_PROFESSIONAL: NavItem[] = [
   { to: "/cursos", label: "Cursos" },
   { to: "/feed", label: "Experiências" },
   { to: "/certificados", label: "Certificados" },
-  { to: "/candidaturas", label: "Candidaturas" },
   { to: "/favoritos", label: "Favoritos" },
 ];
 
@@ -43,6 +42,7 @@ const NAV_COMPANY: NavItem[] = [
   { to: "/vagas", label: "Vagas" },
   { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/feed", label: "Experiências" },
+  { to: "/candidaturas", label: "Candidaturas" },
   { to: "/favoritos", label: "Favoritos" },
 ];
 
@@ -53,6 +53,7 @@ const NAV_ADMIN: NavItem[] = [
   { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/cursos", label: "Cursos" },
   { to: "/feed", label: "Experiências" },
+  { to: "/candidaturas", label: "Candidaturas" },
   { to: "/favoritos", label: "Favoritos" },
 ];
 
@@ -117,6 +118,8 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { user, role, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLandingPage = location.pathname === "/";
   const [profile, setProfile] = useState<any>(null);
   const [companyUsername, setCompanyUsername] = useState<string | null>(null);
   
@@ -449,70 +452,50 @@ export function SiteHeader() {
           )}
 
           {/* Mobile Menu Button & Drawer */}
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <button
-                aria-label="Abrir menu"
-                className="rounded-full border border-border p-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85vw] max-w-sm overflow-y-auto p-0">
-              <div className="flex h-full flex-col">
-                <div className="border-b border-border/60 px-6 py-5">
-                  <Logo />
-                </div>
-                <nav className="flex flex-1 flex-col gap-1 px-4 py-4">
-                  {nav.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => setOpen(false)}
-                      className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                      activeProps={{ className: "text-primary bg-accent" }}
-                      activeOptions={{ exact: item.to === "/" }}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                  {user && (role === "admin" || isAdminUser) ? (
-                    <>
+          {(!isLandingPage || user) && (
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <button
+                  aria-label="Abrir menu"
+                  className="rounded-full border border-border p-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[85vw] max-w-sm overflow-y-auto p-0">
+                <div className="flex h-full flex-col">
+                  <div className="border-b border-border/60 px-6 py-5">
+                    <Logo />
+                  </div>
+                  <nav className="flex flex-1 flex-col gap-1 px-4 py-4">
+                    {nav.map((item) => (
                       <Link
-                        to="/admin"
+                        key={item.to}
+                        to={item.to}
                         onClick={() => setOpen(false)}
                         className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                        activeProps={{ className: "text-primary bg-accent" }}
+                        activeOptions={{ exact: item.to === "/" }}
                       >
-                        Painel Admin
+                        {item.label}
                       </Link>
-                      <Link
-                        to="/empresa"
-                        onClick={() => setOpen(false)}
-                        className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        Painel Empresa
-                      </Link>
-                      <Link
-                        to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
-                        params={companyUsername ? { username: companyUsername } : undefined}
-                        onClick={() => setOpen(false)}
-                        className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        Meu Perfil
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      {user && (
+                    ))}
+                    {user && (role === "admin" || isAdminUser) ? (
+                      <>
                         <Link
-                          to={dashboardLink}
+                          to="/admin"
                           onClick={() => setOpen(false)}
                           className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
-                          {dashboardLabel}
+                          Painel Admin
                         </Link>
-                      )}
-                      {user && role === "company" && (
+                        <Link
+                          to="/empresa"
+                          onClick={() => setOpen(false)}
+                          className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          Painel Empresa
+                        </Link>
                         <Link
                           to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
                           params={companyUsername ? { username: companyUsername } : undefined}
@@ -521,38 +504,60 @@ export function SiteHeader() {
                         >
                           Meu Perfil
                         </Link>
-                      )}
-                    </>
-                  )}
-                  {user && (
-                    <Link
-                      to="/minha-assinatura"
-                      onClick={() => setOpen(false)}
-                      className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                    >
-                      Minha Assinatura
-                    </Link>
-                  )}
-                </nav>
-                <div className="border-t border-border/60 p-4">
-                  {user ? (
-                    <Button onClick={handleSignOut} variant="outline" className="w-full rounded-full">
-                      <LogOut className="mr-2 h-4 w-4" /> Sair
-                    </Button>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button asChild variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
-                        <Link to="/login">Entrar</Link>
+                      </>
+                    ) : (
+                      <>
+                        {user && (
+                          <Link
+                            to={dashboardLink}
+                            onClick={() => setOpen(false)}
+                            className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            {dashboardLabel}
+                          </Link>
+                        )}
+                        {user && role === "company" && (
+                          <Link
+                            to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
+                            params={companyUsername ? { username: companyUsername } : undefined}
+                            onClick={() => setOpen(false)}
+                            className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            Meu Perfil
+                          </Link>
+                        )}
+                      </>
+                    )}
+                    {user && (
+                      <Link
+                        to="/minha-assinatura"
+                        onClick={() => setOpen(false)}
+                        className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        Minha Assinatura
+                      </Link>
+                    )}
+                  </nav>
+                  <div className="border-t border-border/60 p-4">
+                    {user ? (
+                      <Button onClick={handleSignOut} variant="outline" className="w-full rounded-full">
+                        <LogOut className="mr-2 h-4 w-4" /> Sair
                       </Button>
-                      <Button asChild className="rounded-full bg-primary text-primary-foreground" onClick={() => setOpen(false)}>
-                        <Link to="/planos">Cadastrar</Link>
-                      </Button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button asChild variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
+                          <Link to="/login">Entrar</Link>
+                        </Button>
+                        <Button asChild className="rounded-full bg-primary text-primary-foreground" onClick={() => setOpen(false)}>
+                          <Link to="/planos">Cadastrar</Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
       </div>
     </header>

@@ -29,6 +29,43 @@ import { toast } from "sonner";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { generateJobDescription } from "@/server/ai-tools.functions";
 
+function resizeImageBase64(base64Str: string, maxWidth: number, maxHeight: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+      }
+
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+}
+
 type Job = {
   id: string;
   title: string;
@@ -240,6 +277,9 @@ function JobDialog({
 
   const save = async () => {
     if (!form.title.trim()) return toast.error("Título é obrigatório");
+    if (form.banner_url && form.banner_url.length > 250000) {
+      return toast.error("Por favor, selecione uma imagem menor (limite máximo de 5MB).");
+    }
     setSaving(true);
     const payload = {
       ...form,
@@ -320,15 +360,48 @@ function JobDialog({
             <Textarea rows={3} value={form.benefits ?? ""} onChange={(e) => set("benefits", e.target.value)} placeholder="Um por linha" />
           </Field>
 
-          <Field label="Banner da Vaga (URL de imagem)">
-            <Input
-              value={form.banner_url ?? ""}
-              onChange={(e) => set("banner_url", e.target.value || null)}
-              placeholder="https://... ou deixe em branco"
-            />
-            {form.banner_url && (
-              <img src={form.banner_url} alt="Preview" className="mt-2 h-24 w-full rounded-xl object-cover" />
-            )}
+          <Field label="Foto de Capa da Vaga">
+            <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 p-4 bg-surface/50">
+              <Input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                id="admin-job-banner-upload"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  toast.info("Processando e otimizando imagem...");
+                  const reader = new FileReader();
+                  reader.onload = async () => {
+                    let base64 = reader.result as string;
+                    try {
+                      base64 = await resizeImageBase64(base64, 1200, 600);
+                    } catch (resizeErr) {
+                      console.warn("Error resizing image:", resizeErr);
+                    }
+                    set("banner_url", base64);
+                    toast.success("Foto de capa carregada!");
+                  };
+                  reader.readAsDataURL(file);
+                }}
+              />
+              <Label
+                htmlFor="admin-job-banner-upload"
+                className="flex h-14 w-28 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-xs text-primary font-semibold hover:bg-primary/10"
+              >
+                Selecionar Foto
+              </Label>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">Carregar imagem de destaque</p>
+                <p className="text-[10px] text-muted-foreground">PNG, JPG ou GIF. Comprimida automaticamente.</p>
+              </div>
+              {form.banner_url && (
+                <div className="h-14 w-24 overflow-hidden rounded-lg border">
+                  <img src={form.banner_url} alt="Preview" className="h-full w-full object-cover" />
+                </div>
+              )}
+            </div>
           </Field>
 
           <label className="flex items-center gap-2 text-sm">

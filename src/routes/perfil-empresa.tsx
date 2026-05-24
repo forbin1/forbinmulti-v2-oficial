@@ -136,6 +136,43 @@ function PerfilEmpresa() {
     };
   }, [user]);
 
+  function resizeImageBase64(base64Str: string, maxWidth: number, maxHeight: number): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+    });
+  }
+
   const coverInput = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
 
@@ -144,11 +181,21 @@ function PerfilEmpresa() {
     const file = e.target.files[0];
     
     try {
-      toast.info(`Fazendo upload da ${kind === 'cover' ? 'capa' : 'foto de perfil'}...`);
+      toast.info(`Processando e otimizando imagem...`);
       
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = reader.result as string;
+        let base64 = reader.result as string;
+        
+        try {
+          if (kind === "avatar") {
+            base64 = await resizeImageBase64(base64, 256, 256);
+          } else {
+            base64 = await resizeImageBase64(base64, 1200, 600);
+          }
+        } catch (resizeErr) {
+          console.warn("Error resizing image, using original:", resizeErr);
+        }
         
         if (kind === "avatar") {
           const { error } = await supabase

@@ -14,9 +14,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { JOBS, COURSES } from "@/data/mock";
+import { COURSES } from "@/data/mock";
 import { ADS, AdBanner } from "@/components/AdBanner";
-import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/vagas-hero.jpg";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
@@ -66,8 +65,8 @@ const fetchJobsFromServer = createServerFn({ method: "GET" }).handler(async () =
       })(),
       posted: "Recém criada",
       applicants: j.applications?.[0]?.count || 0,
-      requirements: j.requirements ? j.requirements.split(",") : [],
-      cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=600&auto=format&fit=crop"
+      requirements: j.requirements ? j.requirements.split(/[\n,;]+/).map((r: string) => r.trim()).filter(Boolean) : [],
+      cover: j.banner_url || "https://images.unsplash.com/photo-1541888086925-0c13d80b623b?q=80&w=1200&h=675&fit=crop&auto=format"
     }));
 
     cachedJobs = mapped;
@@ -101,7 +100,6 @@ const REGIONS = ["Todas", "São Paulo", "Rio de Janeiro", "Minas Gerais", "Paran
 const TYPES = ["Todos", "CLT", "PJ", "Diária", "Temporário"] as const;
 
 function VagasPage() {
-  const { user, loading } = useAuth();
   const initialJobs = Route.useLoaderData();
   const [region, setRegion] = useState("Todas");
   const [query, setQuery] = useState("");
@@ -326,6 +324,7 @@ function VagasPage() {
                       <Link
                         to="/vagas/$jobId"
                         params={{ jobId: job.id }}
+                        preload="intent"
                         className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/50 hover:shadow-gold"
                       >
                         {/* Cover 16:9 */}
@@ -333,7 +332,8 @@ function VagasPage() {
                           <img
                             src={job.cover}
                             alt={job.title}
-                            loading="lazy"
+                            loading={idx < 3 ? "eager" : "lazy"}
+                            fetchPriority={idx < 3 ? "high" : "low"}
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />

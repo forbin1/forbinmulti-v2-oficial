@@ -322,6 +322,7 @@ export function JobCard({ job }: { job: typeof JOBS[number] }) {
     <Link
       to="/vagas/$jobId"
       params={{ jobId: job.id }}
+      preload="intent"
       className="group flex flex-col rounded-2xl border border-border/60 bg-card p-6 transition hover:border-primary/50 hover:shadow-gold"
     >
       <div className="mb-4 flex items-center justify-between">
