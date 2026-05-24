@@ -410,6 +410,7 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
   const [status, setStatus] = useState<string>("Disponível para propostas");
   const [postos, setPostos] = useState<string>("0");
   const [saving, setSaving] = useState(false);
+  const [customCourse, setCustomCourse] = useState("");
 
   useEffect(() => {
     setForm(profile);
@@ -417,6 +418,25 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
     setStatus(profile.specializations?.[0] || "Disponível para propostas");
     setPostos(profile.specializations?.[1] || "0");
   }, [profile, open]);
+
+  const addCustomCourse = () => {
+    const trimmed = customCourse.trim();
+    if (!trimmed) return;
+    
+    // Case-insensitive match in selectedCourses
+    if (selectedCourses.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Este curso já está adicionado.");
+      return;
+    }
+    
+    // Find case-insensitive match in standard COURSES
+    const matchStandard = COURSES.find(c => c.toLowerCase() === trimmed.toLowerCase());
+    const finalName = matchStandard || trimmed;
+    
+    setSelectedCourses(prev => [...prev, finalName]);
+    setCustomCourse("");
+    toast.success(`Curso "${finalName}" adicionado!`);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -508,7 +528,7 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
           <div className="sm:col-span-2">
             <Label className="mb-2 block text-sm font-semibold text-primary">Meus Cursos & Formações</Label>
             <div className="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto border border-border/60 rounded-xl p-3 bg-surface/50">
-              {COURSES.map((c) => {
+              {[...COURSES, ...selectedCourses.filter(c => !COURSES.includes(c as any))].map((c) => {
                 const active = selectedCourses.includes(c);
                 return (
                   <label key={c} className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors py-1">
@@ -522,10 +542,33 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
                       }}
                       className="rounded border-border bg-surface text-primary focus:ring-primary h-4 w-4"
                     />
-                    <span>{c}</span>
+                    <span className="truncate">{c}</span>
                   </label>
                 );
               })}
+            </div>
+            
+            {/* Adicionar curso personalizado */}
+            <div className="mt-3 flex gap-2">
+              <Input
+                value={customCourse}
+                onChange={(e) => setCustomCourse(e.target.value)}
+                placeholder="Adicionar outro curso (Ex: Primeiros Socorros Avançado)"
+                className="h-10 text-sm rounded-xl bg-surface"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomCourse();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                onClick={addCustomCourse}
+                className="h-10 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary font-bold px-4 shrink-0"
+              >
+                Adicionar
+              </Button>
             </div>
           </div>
         </div>
