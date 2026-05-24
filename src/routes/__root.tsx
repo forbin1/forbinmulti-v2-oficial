@@ -93,6 +93,8 @@ function RootComponent() {
   ];
   const isEmpresaArea = dashboardRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
   const hideChrome = isAuthScreen || isAdminArea || isEmpresaArea;
+  const isLandingPage = pathname === "/";
+  const hideMobileNav = hideChrome || isLandingPage;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -103,14 +105,14 @@ function RootComponent() {
 
   return (
     <AuthProvider>
-      <div className={`flex min-h-screen flex-col bg-background text-foreground ${!hideChrome ? "pb-16 lg:pb-0" : ""}`}>
+      <div className={`flex min-h-screen flex-col bg-background text-foreground ${!hideMobileNav ? "pb-16 lg:pb-0" : ""}`}>
         {!hideChrome && <SiteHeader />}
         <ExpiredBanner />
         <main className="flex-1">
           <Outlet />
         </main>
         {!hideChrome && <SiteFooter />}
-        {!hideChrome && <MobileBottomNav />}
+        {!hideMobileNav && <MobileBottomNav />}
         <Toaster theme="dark" richColors position="top-center" />
       </div>
     </AuthProvider>
