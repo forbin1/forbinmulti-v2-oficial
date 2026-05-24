@@ -88,7 +88,7 @@ function EmpresaAfiliados() {
   }
 
   return (
-    <div className="p-6 sm:p-10">
+    <div className="space-y-8">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-6">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight">Marketplace de Cursos</h1>

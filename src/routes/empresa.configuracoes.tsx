@@ -181,7 +181,7 @@ function EmpresaConfiguracoes() {
   }
 
   return (
-    <div className="p-6 sm:p-10 max-w-4xl">
+    <div className="space-y-8 max-w-4xl">
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground mt-1">Gerencie os detalhes corporativos e segurança da sua empresa.</p>

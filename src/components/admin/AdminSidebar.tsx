@@ -118,7 +118,7 @@ export function AdminMobileBar() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center justify-between border-b border-border/60 bg-card px-4 py-3 lg:hidden">
+    <div className="flex h-16 items-center justify-between border-b border-border/60 bg-card px-4 lg:hidden">
       <Button
         variant="ghost"
         size="icon"

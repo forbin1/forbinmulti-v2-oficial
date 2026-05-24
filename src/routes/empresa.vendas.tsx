@@ -143,7 +143,7 @@ function EmpresaVendas() {
   }
 
   return (
-    <div className="p-6 sm:p-10">
+    <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight">Dashboard de Vendas</h1>
         <p className="text-muted-foreground mt-1">

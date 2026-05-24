@@ -405,7 +405,7 @@ function AdminDashboard() {
 
   return (
     <div
-      className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-10 lg:px-8 space-y-8"
+      className="space-y-8"
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(12px)",

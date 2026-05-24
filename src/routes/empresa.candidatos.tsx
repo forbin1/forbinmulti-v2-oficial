@@ -144,7 +144,7 @@ function EmpresaCandidatos() {
   }
 
   return (
-    <div className="p-6 sm:p-10">
+    <div className="space-y-8">
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold tracking-tight">Candidatos</h1>
         <p className="text-muted-foreground mt-1">Gerencie quem se candidatou e defina os processos seletivos.</p>

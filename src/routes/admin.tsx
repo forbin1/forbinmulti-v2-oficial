@@ -51,7 +51,7 @@ function AdminLayout() {
       <AdminSidebar />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <AdminMobileBar />
-        <main className="min-w-0 flex-1 overflow-x-hidden">
+        <main className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">
           <Outlet />
         </main>
       </div>
