@@ -7,6 +7,8 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { useSubscription } from "@/hooks/use-subscription";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import { computeLevel, type LevelExperienceInput } from "@/lib/professional-level";
+import { LevelBadge } from "@/components/LevelBadge";
 
 export const Route = createFileRoute("/profissionais-ativos")({
   head: () => ({
@@ -48,6 +50,8 @@ type Professional = {
   whatsapp: string | null;
   is_verified: boolean;
   specializations: string[] | null;
+  courses: string[] | null;
+  experience_years: number | null;
   subscription_status: string | null;
   subscription_plan: string | null;
   subscription_expires_at: string | null;
@@ -56,6 +60,7 @@ type Professional = {
 function ProfissionaisAtivos() {
   const { isFavorite, toggle } = useFavorites();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [expByUser, setExpByUser] = useState<Record<string, LevelExperienceInput[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -74,7 +79,7 @@ function ProfissionaisAtivos() {
   const fetchProfessionals = async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, user_id, full_name, role, city, state, bio, avatar_url, whatsapp, is_verified, specializations, subscription_status, subscription_plan, subscription_expires_at")
+      .select("id, user_id, full_name, role, city, state, bio, avatar_url, whatsapp, is_verified, specializations, courses, experience_years, subscription_status, subscription_plan, subscription_expires_at")
       .eq("subscription_status", "active")
       .ilike("subscription_plan", "%profissional%")
       .order("created_at", { ascending: false });
@@ -86,6 +91,20 @@ function ProfissionaisAtivos() {
         return new Date(p.subscription_expires_at) > now;
       });
       setProfessionals(activeProfessionals as Professional[]);
+
+      // Busca experiências de todos os profissionais listados em uma única query
+      const ids = activeProfessionals.map((p) => p.user_id);
+      if (ids.length > 0) {
+        const { data: exps } = await supabase
+          .from("professional_experiences")
+          .select("user_id, category, position")
+          .in("user_id", ids);
+        const map: Record<string, LevelExperienceInput[]> = {};
+        exps?.forEach((e) => {
+          (map[e.user_id] ??= []).push({ category: e.category, position: e.position });
+        });
+        setExpByUser(map);
+      }
     } else if (error) {
       console.error("Erro ao carregar profissionais:", error);
     }
@@ -187,6 +206,11 @@ function ProfissionaisAtivos() {
             const fav = isFavorite(p.user_id, "professional");
             const locationStr = [p.city, p.state].filter(Boolean).join(", ");
             const status = p.specializations?.[0] || "Disponível para propostas";
+            const level = computeLevel({
+              courses: p.courses,
+              experienceYears: p.experience_years,
+              experiences: expByUser[p.user_id] || [],
+            });
 
             return (
               <div
@@ -207,7 +231,10 @@ function ProfissionaisAtivos() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-semibold leading-tight group-hover:text-primary transition-colors">{p.full_name}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="truncate font-semibold leading-tight group-hover:text-primary transition-colors">{p.full_name}</h3>
+                      {level.tier !== "none" && <LevelBadge tier={level.tier} size="sm" showLabel={false} />}
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">{p.role || "Profissional de Segurança"}</p>
                     <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                       status === "Disponível para propostas"

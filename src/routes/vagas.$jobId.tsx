@@ -131,6 +131,7 @@ function JobDetail() {
   const [saved, setSaved] = useState(false);
   const [isStaticVisible, setIsStaticVisible] = useState(false);
   const [isNearTop, setIsNearTop] = useState(true);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const gate = useAuthGate();
   const { user, role } = useAuth();
   const { isActive } = useSubscription();
@@ -168,6 +169,20 @@ function JobDetail() {
   }, []);
 
   const showFloating = !isNearTop && !isStaticVisible;
+
+  // Always fetch company logo client-side (base64 data can be too large for SSR serialization)
+  useEffect(() => {
+    if (job.companyUserId) {
+      supabase
+        .from("companies")
+        .select("logo_url")
+        .eq("user_id", job.companyUserId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.logo_url) setCompanyLogo(data.logo_url);
+        });
+    }
+  }, [job.companyUserId]);
 
   useEffect(() => {
     if (user && role === "professional") {
@@ -283,8 +298,8 @@ function JobDetail() {
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary/30 bg-primary/10 text-lg font-bold text-primary sm:h-20 sm:w-20 sm:text-xl">
-                  {(job as any).logo ? (
-                    <img src={(job as any).logo} alt={job.company} className="h-full w-full object-cover" />
+                  {companyLogo ? (
+                    <img src={companyLogo} alt={job.company} className="h-full w-full object-cover" />
                   ) : (
                     job.companyInitials
                   )}

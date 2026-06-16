@@ -482,6 +482,48 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_experiences: {
+        Row: {
+          category: string | null
+          company: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          is_current: boolean
+          position: string
+          start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          company: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          position: string
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          company?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          position?: string
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -489,16 +531,28 @@ export type Database = {
           city: string | null
           cnv_number: string | null
           courses: string[] | null
+          cover_url: string | null
           created_at: string
+          escolaridade: string | null
           experience_years: number | null
           full_name: string
+          has_cnv: boolean
           id: string
+          instagram_url: string | null
           is_hidden: boolean
+          is_verified: boolean
+          linkedin_url: string | null
           phone: string | null
+          role: string | null
           specializations: string[] | null
           state: string | null
+          subscription_expires_at: string | null
+          subscription_plan: string | null
+          subscription_status: string | null
           updated_at: string
           user_id: string
+          website_url: string | null
+          whatsapp: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -506,16 +560,28 @@ export type Database = {
           city?: string | null
           cnv_number?: string | null
           courses?: string[] | null
+          cover_url?: string | null
           created_at?: string
+          escolaridade?: string | null
           experience_years?: number | null
           full_name?: string
+          has_cnv?: boolean
           id?: string
+          instagram_url?: string | null
           is_hidden?: boolean
+          is_verified?: boolean
+          linkedin_url?: string | null
           phone?: string | null
+          role?: string | null
           specializations?: string[] | null
           state?: string | null
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
           updated_at?: string
           user_id: string
+          website_url?: string | null
+          whatsapp?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -523,16 +589,28 @@ export type Database = {
           city?: string | null
           cnv_number?: string | null
           courses?: string[] | null
+          cover_url?: string | null
           created_at?: string
+          escolaridade?: string | null
           experience_years?: number | null
           full_name?: string
+          has_cnv?: boolean
           id?: string
+          instagram_url?: string | null
           is_hidden?: boolean
+          is_verified?: boolean
+          linkedin_url?: string | null
           phone?: string | null
+          role?: string | null
           specializations?: string[] | null
           state?: string | null
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
           updated_at?: string
           user_id?: string
+          website_url?: string | null
+          whatsapp?: string | null
         }
         Relationships: []
       }

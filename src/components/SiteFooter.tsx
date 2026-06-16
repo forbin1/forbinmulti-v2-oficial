@@ -49,7 +49,7 @@ export function SiteFooter() {
         <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60 transition-colors duration-300">
           <span>desenvolvido com 💛 por</span>
           <a
-            href="https://thunderagency.com.br"
+            href="https://agenciathunder.com.br"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center transition-opacity opacity-60 hover:opacity-100"

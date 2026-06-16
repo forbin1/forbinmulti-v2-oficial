@@ -29,6 +29,11 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { FeatureGate } from "@/components/SubscriptionGuard";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { computeLevel, LEVEL_META, ESCOLARIDADE_OPTIONS } from "@/lib/professional-level";
+import { LevelBadge } from "@/components/LevelBadge";
+import {
+  ExperienceDialog, ExperienceList, AddExperienceButton, toMonthInput, toDbDate, type ExperienceDraft,
+} from "@/components/ProfessionalExperiences";
 
 export const Route = createFileRoute("/profissional")({
   head: () => ({
@@ -58,6 +63,8 @@ type Profile = {
   is_verified: boolean;
   courses: string[] | null;
   specializations: string[] | null;
+  escolaridade: string | null;
+  has_cnv: boolean | null;
 };
 
 function PerfilProfissional() {
@@ -68,10 +75,70 @@ function PerfilProfissional() {
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
   const [coursesCount, setCoursesCount] = useState<number>(0);
   const [userCourses, setUserCourses] = useState<{ title: string; source: 'profile' | 'certificate' | 'online' }[]>([]);
+  const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
+  const [expDialogOpen, setExpDialogOpen] = useState(false);
+  const [editingExp, setEditingExp] = useState<ExperienceDraft | null>(null);
+  const [savingExp, setSavingExp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-  
+
   const { posts: allPosts } = usePosts();
+
+  const loadExperiences = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("professional_experiences")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("is_current", { ascending: false })
+      .order("start_date", { ascending: false });
+    if (data) {
+      setExperiences(
+        data.map((e) => ({
+          id: e.id,
+          company: e.company,
+          position: e.position,
+          category: e.category,
+          start_date: toMonthInput(e.start_date),
+          end_date: toMonthInput(e.end_date),
+          is_current: e.is_current,
+          description: e.description,
+        })),
+      );
+    }
+  };
+
+  const saveExperience = async (draft: ExperienceDraft) => {
+    if (!user) return;
+    setSavingExp(true);
+    const payload = {
+      user_id: user.id,
+      company: draft.company,
+      position: draft.position,
+      category: draft.category,
+      start_date: toDbDate(draft.start_date),
+      end_date: draft.is_current ? null : toDbDate(draft.end_date),
+      is_current: draft.is_current,
+      description: draft.description || null,
+    };
+    const { error } = draft.id
+      ? await supabase.from("professional_experiences").update(payload).eq("id", draft.id)
+      : await supabase.from("professional_experiences").insert(payload);
+    setSavingExp(false);
+    if (error) return toast.error("Erro ao salvar experiência: " + error.message);
+    toast.success("Experiência salva!");
+    setExpDialogOpen(false);
+    setEditingExp(null);
+    loadExperiences();
+  };
+
+  const deleteExperience = async (draft: ExperienceDraft) => {
+    if (!draft.id) return;
+    const { error } = await supabase.from("professional_experiences").delete().eq("id", draft.id);
+    if (error) return toast.error("Erro ao excluir: " + error.message);
+    toast.success("Experiência removida");
+    loadExperiences();
+  };
 
   const loadCoursesCount = async () => {
     if (!user) return;
@@ -160,6 +227,7 @@ function PerfilProfissional() {
 
   useEffect(() => {
     loadProfile();
+    loadExperiences();
   }, [user]);
 
   const handleUpload = async (file: File, type: "avatar" | "cover") => {
@@ -199,8 +267,14 @@ function PerfilProfissional() {
   if (!profile) return <div className="p-20 text-center">Perfil não encontrado.</div>;
 
   const initials = profile.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  
+
   const userPosts = allPosts.filter(p => p.user_id === user?.id);
+
+  const level = computeLevel({
+    courses: profile.courses,
+    experienceYears: profile.experience_years,
+    experiences,
+  });
 
   return (
     <div className="pb-16 sm:pb-0">
@@ -256,6 +330,7 @@ function PerfilProfissional() {
                     <ShieldCheck className="mr-1 h-3 w-3" /> Verificado
                   </Badge>
                 )}
+                {level.tier !== "none" && <LevelBadge tier={level.tier} size="md" />}
               </div>
               <p className="mt-1 text-sm font-medium text-muted-foreground/80 sm:text-base">
                 {profile.role || "Profissional de Segurança"}{profile.experience_years ? ` · ${profile.experience_years} anos de exp.` : ""}
@@ -307,7 +382,8 @@ function PerfilProfissional() {
             <Tabs defaultValue="sobre">
               <TabsList className="flex h-auto w-full gap-1.5 rounded-2xl bg-card/50 p-1.5 backdrop-blur-md">
                 <TabsTrigger value="sobre" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Sobre</TabsTrigger>
-                <TabsTrigger value="experiencia" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Experiências</TabsTrigger>
+                <TabsTrigger value="experiencias" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Experiências</TabsTrigger>
+                <TabsTrigger value="publicacoes" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Publicações</TabsTrigger>
               </TabsList>
 
               <TabsContent value="sobre" className="mt-5 space-y-5">
@@ -354,7 +430,22 @@ function PerfilProfissional() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="experiencia" className="mt-5 space-y-5 animate-in fade-in slide-in-from-bottom-4">
+              <TabsContent value="experiencias" className="mt-5 space-y-5 animate-in fade-in slide-in-from-bottom-4">
+                <Card title="Experiências Profissionais">
+                  <div className="space-y-4">
+                    <ExperienceList
+                      items={experiences}
+                      editable
+                      emptyText="Nenhuma experiência cadastrada ainda. Adicione suas experiências para evoluir de nível."
+                      onEdit={(e) => { setEditingExp(e); setExpDialogOpen(true); }}
+                      onDelete={deleteExperience}
+                    />
+                    <AddExperienceButton onClick={() => { setEditingExp(null); setExpDialogOpen(true); }} />
+                  </div>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="publicacoes" className="mt-5 space-y-5 animate-in fade-in slide-in-from-bottom-4">
                 <ComposeBox />
                 {userPosts.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-border/60 p-10 text-center text-sm text-muted-foreground bg-card/20">
@@ -375,6 +466,8 @@ function PerfilProfissional() {
               <div className="space-y-3 text-sm font-medium">
                 <Row label="Função" value={profile.role || "Não informada"} />
                 <Row label="Região" value={profile.city ? `${profile.city}, ${profile.state}` : "Não informada"} />
+                <Row label="Escolaridade" value={profile.escolaridade || "Não informada"} />
+                <Row label="Possui CNV" value={profile.has_cnv ? "Sim" : "Não"} />
                 <Row label="Status" value={profile.specializations?.[0] || "Disponível para propostas"} />
                 <div className="mt-4 pt-4 border-t border-white/5">
                    <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary font-bold hover:bg-primary/10" onClick={() => setIsEditing(true)}>
@@ -385,11 +478,19 @@ function PerfilProfissional() {
             </Card>
 
             <div className="rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 p-6 border border-primary/20 sm:rounded-3xl sm:p-8">
-              <ShieldCheck className="h-8 w-8 text-primary mb-3" />
-              <h3 className="font-display text-lg font-bold mb-1.5">Selo de Qualidade</h3>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold">Nível do Profissional</h3>
+                <LevelBadge tier={level.tier} size="md" />
+              </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Este profissional possui certificações validadas pela plataforma FORBIN MultiEmpresas.
+                {LEVEL_META[level.tier].description}
               </p>
+              <div className="mt-4 space-y-1.5 border-t border-white/5 pt-4 text-xs text-muted-foreground">
+                <LevelCriterion ok={level.facts.hasFormacao} label="Curso de Formação de Vigilante" />
+                <LevelCriterion ok={level.facts.experienceYears >= 1} label={`Experiência registrada (${level.facts.experienceYears} ${level.facts.experienceYears === 1 ? "ano" : "anos"})`} />
+                <LevelCriterion ok={level.facts.experienceCount > 0} label={`Experiências cadastradas (${level.facts.experienceCount})`} />
+                <LevelCriterion ok={level.facts.hasSpecialty} label="Especialização (Escolta, SPP, CFTV, etc.)" />
+              </div>
             </div>
           </aside>
         </div>
@@ -400,6 +501,14 @@ function PerfilProfissional() {
         profile={profile}
         onClose={() => setIsEditing(false)}
         onSaved={loadProfile}
+      />
+
+      <ExperienceDialog
+        open={expDialogOpen}
+        initial={editingExp}
+        saving={savingExp}
+        onClose={() => { setExpDialogOpen(false); setEditingExp(null); }}
+        onSave={saveExperience}
       />
     </div>
   );
@@ -455,6 +564,8 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
         linkedin_url: form.linkedin_url,
         instagram_url: form.instagram_url,
         website_url: form.website_url,
+        escolaridade: form.escolaridade || null,
+        has_cnv: form.has_cnv ?? false,
         courses: selectedCourses,
         specializations: [status, postos],
       })
@@ -499,6 +610,26 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
           <div>
             <Label>LinkedIn (URL)</Label>
             <Input value={form.linkedin_url ?? ""} onChange={(e) => setForm({...form, linkedin_url: e.target.value})} />
+          </div>
+          <div>
+            <Label>Escolaridade</Label>
+            <select
+              value={form.escolaridade ?? ""}
+              onChange={(e) => setForm({ ...form, escolaridade: e.target.value || null })}
+              className="h-10 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Selecione</option>
+              {ESCOLARIDADE_OPTIONS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>Possui CNV? (Carteira Nacional de Vigilante)</Label>
+            <div className="flex gap-3">
+              <Button type="button" variant={form.has_cnv === true ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, has_cnv: true })}>Sim</Button>
+              <Button type="button" variant={form.has_cnv === false ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, has_cnv: false })}>Não</Button>
+            </div>
           </div>
           <div>
             <Label>Status de Disponibilidade</Label>
@@ -616,6 +747,15 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between gap-4">
       <span className="text-muted-foreground/80 font-medium">{label}</span>
       <span className="font-bold text-right">{value}</span>
+    </div>
+  );
+}
+
+function LevelCriterion({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={ok ? "text-success" : "text-muted-foreground/50"}>{ok ? "✓" : "○"}</span>
+      <span className={ok ? "text-foreground/80" : ""}>{label}</span>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import {
   Heart,
   ArrowLeft,
   Award,
-  Briefcase,
   Camera,
   ShieldCheck,
   Building2,
@@ -19,6 +18,9 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { computeLevel } from "@/lib/professional-level";
+import { LevelBadge } from "@/components/LevelBadge";
+import { ExperienceList, toMonthInput, type ExperienceDraft } from "@/components/ProfessionalExperiences";
 
 export const Route = createFileRoute("/u/$handle")({
   head: ({ params }) => ({
@@ -40,6 +42,7 @@ function PerfilUsuario() {
   const { user } = useAuth();
 
   const [profile, setProfile] = useState<any>(null);
+  const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [cover, setCover] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -80,11 +83,35 @@ function PerfilUsuario() {
               whatsapp: data.phone || undefined,
               bio: data.bio || undefined,
               coursesCount: data.courses?.length || 0,
+              courses: data.courses || [],
               experience_years: data.experience_years || 0,
+              escolaridade: (data as any).escolaridade || null,
+              has_cnv: (data as any).has_cnv ?? null,
               specializations: data.specializations || [],
             });
             setCover(data.cover_url || null);
             setAvatar(data.avatar_url || null);
+
+            const { data: expData } = await supabase
+              .from("professional_experiences")
+              .select("*")
+              .eq("user_id", data.user_id)
+              .order("is_current", { ascending: false })
+              .order("start_date", { ascending: false });
+            if (expData) {
+              setExperiences(
+                expData.map((e) => ({
+                  id: e.id,
+                  company: e.company,
+                  position: e.position,
+                  category: e.category,
+                  start_date: toMonthInput(e.start_date),
+                  end_date: toMonthInput(e.end_date),
+                  is_current: e.is_current,
+                  description: e.description,
+                })),
+              );
+            }
           } else {
             setProfile(null);
           }
@@ -144,6 +171,12 @@ function PerfilUsuario() {
   const postos = profile.specializations?.[1] || POSTOS_BY_HANDLE[profile.handle] || 0;
   const cursos = profile.coursesCount !== undefined ? profile.coursesCount : 5;
   const anos = profile.experience_years !== undefined ? profile.experience_years : 8;
+
+  const level = computeLevel({
+    courses: profile.courses,
+    experienceYears: profile.experience_years,
+    experiences,
+  });
 
   return (
     <div className="pb-12">
@@ -205,7 +238,10 @@ function PerfilUsuario() {
                 {profile.kind === "company" ? (
                   <Badge className="rounded-full border-primary/40 bg-primary/15 text-primary"><Building2 className="mr-1 h-3.5 w-3.5" /> Empresa</Badge>
                 ) : (
-                  <Badge className="rounded-full border-success/40 bg-success/15 text-success"><ShieldCheck className="mr-1 h-3.5 w-3.5" /> Verificado</Badge>
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    <Badge className="rounded-full border-success/40 bg-success/15 text-success"><ShieldCheck className="mr-1 h-3.5 w-3.5" /> Verificado</Badge>
+                    {level.tier !== "none" && <LevelBadge tier={level.tier} size="md" />}
+                  </span>
                 )}
               </div>
               <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">{profile.name}</h1>
@@ -254,30 +290,21 @@ function PerfilUsuario() {
         {profile.kind === "professional" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Card title="Cursos & certificações">
-              <ul className="space-y-3">
-                {["Formação de Vigilante", "Reciclagem 2024", "Vigilante Líder", "Operador de CFTV", "Defesa Pessoal"].map((c) => (
-                  <li key={c} className="flex items-center gap-3">
-                    <Award className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-medium">{c}</span>
-                  </li>
-                ))}
-              </ul>
+              {profile.courses && profile.courses.length > 0 ? (
+                <ul className="space-y-3">
+                  {profile.courses.map((c: string) => (
+                    <li key={c} className="flex items-center gap-3">
+                      <Award className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium">{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum curso cadastrado.</p>
+              )}
             </Card>
-            <Card title="Experiências recentes">
-              <div className="space-y-3">
-                {[
-                  { r: "Vigilante Sênior", c: "Vigilância Total", p: "2020 — Atual" },
-                  { r: "Vigilante", c: "Águia Negra", p: "2017 — 2020" },
-                ].map((e) => (
-                  <div key={e.r} className="flex items-start gap-3">
-                    <Briefcase className="mt-0.5 h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-semibold">{e.r}</p>
-                      <p className="text-xs text-muted-foreground">{e.c} · {e.p}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <Card title="Experiências profissionais">
+              <ExperienceList items={experiences} emptyText="Nenhuma experiência cadastrada." />
             </Card>
           </div>
         )}

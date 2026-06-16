@@ -11,6 +11,10 @@ import { COURSES } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ESCOLARIDADE_OPTIONS } from "@/lib/professional-level";
+import {
+  ExperienceDialog, ExperienceList, AddExperienceButton, toDbDate, type ExperienceDraft,
+} from "@/components/ProfessionalExperiences";
 
 export const Route = createFileRoute("/cadastro")({
   head: () => ({
@@ -27,7 +31,7 @@ const STEPS = [
   { id: 2, title: "Dados pessoais", icon: User },
   { id: 3, title: "Endereço", icon: MapPin },
   { id: 4, title: "Cursos & formação", icon: GraduationCap },
-  { id: 5, title: "Foto & finalização", icon: Camera },
+  { id: 5, title: "Foto de Corpo Inteiro", icon: Camera },
 ];
 
 function CadastroProfissional() {
@@ -40,6 +44,11 @@ function CadastroProfissional() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("SP");
   const [bio, setBio] = useState("");
+  const [escolaridade, setEscolaridade] = useState("");
+  const [hasCnv, setHasCnv] = useState<boolean | null>(null);
+  const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
+  const [expDialogOpen, setExpDialogOpen] = useState(false);
+  const [editingExp, setEditingExp] = useState<ExperienceDraft | null>(null);
 
   // Step 1 - Account
   const [email, setEmail] = useState("");
@@ -108,11 +117,33 @@ function CadastroProfissional() {
             state: state || null,
             courses: selectedCourses,
             bio: bio || null,
-          })
+            escolaridade: escolaridade || null,
+            has_cnv: hasCnv ?? false,
+          } as any)
           .eq("user_id", userId);
-          
+
         if (error) {
           console.error("Error saving profile details:", error);
+        }
+
+        // Save professional experiences
+        if (experiences.length > 0) {
+          const rows = experiences.map((exp) => ({
+            user_id: userId,
+            company: exp.company,
+            position: exp.position,
+            category: exp.category,
+            start_date: toDbDate(exp.start_date),
+            end_date: exp.is_current ? null : toDbDate(exp.end_date),
+            is_current: exp.is_current,
+            description: exp.description || null,
+          }));
+          const { error: expError } = await supabase
+            .from("professional_experiences")
+            .insert(rows as any);
+          if (expError) {
+            console.error("Error saving experiences:", expError);
+          }
         }
       }
     } catch (err) {
@@ -310,20 +341,87 @@ function CadastroProfissional() {
               })}
             </div>
 
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Escolaridade">
+                <select
+                  value={escolaridade}
+                  onChange={(e) => setEscolaridade(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base"
+                >
+                  <option value="">Selecione</option>
+                  {ESCOLARIDADE_OPTIONS.map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Possui CNV? (Carteira Nacional de Vigilante)">
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant={hasCnv === true ? "default" : "outline"}
+                    className="h-12 flex-1 rounded-xl"
+                    onClick={() => setHasCnv(true)}
+                  >
+                    Sim
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={hasCnv === false ? "default" : "outline"}
+                    className="h-12 flex-1 rounded-xl"
+                    onClick={() => setHasCnv(false)}
+                  >
+                    Não
+                  </Button>
+                </div>
+              </Field>
+            </div>
+
             <Field label="Resumo profissional">
               <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} className="rounded-xl bg-surface text-base" placeholder="Conte um pouco sobre sua experiência, anos de atuação, especialidades..." />
             </Field>
+
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-display text-lg font-bold">Experiências Profissionais</h3>
+                <p className="text-sm text-muted-foreground">Adicione empresas onde trabalhou, cargos e períodos. Isso ajuda a definir seu nível na plataforma.</p>
+              </div>
+              <ExperienceList
+                items={experiences}
+                editable
+                emptyText="Nenhuma experiência adicionada ainda."
+                onEdit={(e) => { setEditingExp(e); setExpDialogOpen(true); }}
+                onDelete={(e) => setExperiences((prev) => prev.filter((x) => x !== e))}
+              />
+              <AddExperienceButton onClick={() => { setEditingExp(null); setExpDialogOpen(true); }} />
+            </div>
+
+            <ExperienceDialog
+              open={expDialogOpen}
+              initial={editingExp}
+              onClose={() => { setExpDialogOpen(false); setEditingExp(null); }}
+              onSave={(draft) => {
+                setExperiences((prev) => {
+                  if (editingExp && prev.includes(editingExp)) {
+                    return prev.map((x) => (x === editingExp ? draft : x));
+                  }
+                  return [...prev, draft];
+                });
+                setExpDialogOpen(false);
+                setEditingExp(null);
+              }}
+            />
           </div>
         )}
 
         {step === 5 && (
           <div className="space-y-6">
-            <h2 className="font-display text-2xl font-bold">Quase lá! Adicione sua foto</h2>
+            <h2 className="font-display text-2xl font-bold">Foto de Corpo Inteiro (Perfil Profissional)</h2>
+            <p className="text-muted-foreground">Envie uma foto de corpo inteiro, de preferência uniformizado. Essa será sua apresentação profissional para as empresas.</p>
             <div className="rounded-3xl border-2 border-dashed border-border bg-surface p-12 text-center">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 text-primary">
                 <Upload className="h-8 w-8" />
               </div>
-              <p className="mt-4 text-lg font-semibold">Arraste sua foto ou clique para enviar</p>
+              <p className="mt-4 text-lg font-semibold">Arraste sua foto de corpo inteiro ou clique para enviar</p>
               <p className="mt-1 text-sm text-muted-foreground">JPG ou PNG, máximo 5MB</p>
               <Button className="mt-6 rounded-full">Selecionar foto</Button>
             </div>
