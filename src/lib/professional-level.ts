@@ -135,43 +135,25 @@ export function computeLevel(input: LevelInput): LevelResult {
   return { tier, facts };
 }
 
-export const LEVEL_META: Record<
-  LevelTier,
-  { label: string; emoji: string; description: string; className: string; dotClassName: string }
-> = {
+export const LEVEL_META: Record<LevelTier, { label: string; description: string }> = {
   diamante: {
     label: "Diamante",
-    emoji: "💎",
     description: "Vigilante com 5+ anos de carteira e experiência comprovada em operações críticas.",
-    className: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300",
-    dotClassName: "bg-cyan-300",
   },
   ouro: {
     label: "Ouro",
-    emoji: "🥇",
     description: "Vigilante com especialização avançada e experiência consolidada na área.",
-    className: "border-amber-400/40 bg-amber-400/10 text-amber-300",
-    dotClassName: "bg-amber-300",
   },
   prata: {
     label: "Prata",
-    emoji: "🥈",
     description: "Vigilante com experiência em eventos sociais ou corporativos.",
-    className: "border-slate-300/40 bg-slate-300/10 text-slate-200",
-    dotClassName: "bg-slate-200",
   },
   bronze: {
     label: "Bronze",
-    emoji: "🥉",
     description: "Curso de Formação de Vigilante concluído.",
-    className: "border-orange-500/40 bg-orange-500/10 text-orange-300",
-    dotClassName: "bg-orange-400",
   },
   none: {
     label: "Não classificado",
-    emoji: "🔰",
     description: "Conclua o Curso de Formação de Vigilante para iniciar sua classificação.",
-    className: "border-border bg-muted/40 text-muted-foreground",
-    dotClassName: "bg-muted-foreground",
   },
 };
