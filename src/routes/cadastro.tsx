@@ -46,6 +46,7 @@ function CadastroProfissional() {
   const [bio, setBio] = useState("");
   const [escolaridade, setEscolaridade] = useState("");
   const [hasCnv, setHasCnv] = useState<boolean | null>(null);
+  const [servedMilitary, setServedMilitary] = useState<boolean | null>(null);
   const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
   const [expDialogOpen, setExpDialogOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<ExperienceDraft | null>(null);
@@ -100,6 +101,10 @@ function CadastroProfissional() {
       handleCreateAccount();
       return;
     }
+    if (step === 2 && !phone.trim()) {
+      toast.error("Informe seu número de WhatsApp.");
+      return;
+    }
     setStep((s) => Math.min(STEPS.length, s + 1));
   };
 
@@ -119,6 +124,7 @@ function CadastroProfissional() {
             bio: bio || null,
             escolaridade: escolaridade || null,
             has_cnv: hasCnv ?? false,
+            served_military: servedMilitary,
           } as any)
           .eq("user_id", userId);
 
@@ -264,7 +270,7 @@ function CadastroProfissional() {
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="CPF"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="000.000.000-00" /></Field>
               <Field label="Data de nascimento"><Input type="date" className="h-12 rounded-xl bg-surface text-base" /></Field>
-              <Field label="Telefone / WhatsApp"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="(11) 99999-0000" /></Field>
+              <Field label="WhatsApp *"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="(11) 99999-0000" /></Field>
               <Field label="Estado civil">
                 <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
                   <option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option>
@@ -275,8 +281,8 @@ function CadastroProfissional() {
             </div>
             <Field label="Já serviu o quartel?">
               <div className="flex gap-3">
-                <Button variant="outline" className="h-12 flex-1 rounded-xl">Sim</Button>
-                <Button variant="outline" className="h-12 flex-1 rounded-xl">Não</Button>
+                <Button type="button" variant={servedMilitary === true ? "default" : "outline"} className="h-12 flex-1 rounded-xl" onClick={() => setServedMilitary(true)}>Sim</Button>
+                <Button type="button" variant={servedMilitary === false ? "default" : "outline"} className="h-12 flex-1 rounded-xl" onClick={() => setServedMilitary(false)}>Não</Button>
               </div>
             </Field>
           </div>

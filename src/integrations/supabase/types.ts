@@ -544,6 +544,7 @@ export type Database = {
           linkedin_url: string | null
           phone: string | null
           role: string | null
+          served_military: boolean | null
           specializations: string[] | null
           state: string | null
           subscription_expires_at: string | null
@@ -573,6 +574,7 @@ export type Database = {
           linkedin_url?: string | null
           phone?: string | null
           role?: string | null
+          served_military?: boolean | null
           specializations?: string[] | null
           state?: string | null
           subscription_expires_at?: string | null
@@ -602,6 +604,7 @@ export type Database = {
           linkedin_url?: string | null
           phone?: string | null
           role?: string | null
+          served_military?: boolean | null
           specializations?: string[] | null
           state?: string | null
           subscription_expires_at?: string | null
