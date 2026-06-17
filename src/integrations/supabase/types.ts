@@ -345,6 +345,36 @@ export type Database = {
           },
         ]
       }
+      lesson_questions: {
+        Row: {
+          correct_index: number
+          created_at: string
+          id: string
+          lesson_id: string
+          options: string[]
+          question: string
+          sort_order: number
+        }
+        Insert: {
+          correct_index?: number
+          created_at?: string
+          id?: string
+          lesson_id: string
+          options?: string[]
+          question: string
+          sort_order?: number
+        }
+        Update: {
+          correct_index?: number
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          options?: string[]
+          question?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       lessons: {
         Row: {
           course_id: string
@@ -353,6 +383,7 @@ export type Database = {
           duration_minutes: number | null
           id: string
           module_id: string | null
+          quiz_enabled: boolean
           sort_order: number
           title: string
           video_url: string | null
@@ -364,6 +395,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           module_id?: string | null
+          quiz_enabled?: boolean
           sort_order?: number
           title: string
           video_url?: string | null
@@ -375,6 +407,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           module_id?: string | null
+          quiz_enabled?: boolean
           sort_order?: number
           title?: string
           video_url?: string | null

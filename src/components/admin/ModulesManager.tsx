@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import {
-  Pencil, Trash2, Plus, Loader2, Layers, Video, ArrowUp, ArrowDown, Upload, X,
+  Pencil, Trash2, Plus, Loader2, Layers, Video, ArrowUp, ArrowDown, Upload, X, ClipboardCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,17 @@ type Lesson = {
   video_url: string | null;
   duration_minutes: number | null;
   sort_order: number;
+  quiz_enabled?: boolean;
 };
+
+type QuizQuestion = {
+  question: string;
+  options: string[]; // 4 alternativas
+  correct_index: number;
+};
+
+const emptyQuestions = (): QuizQuestion[] =>
+  Array.from({ length: 5 }, () => ({ question: "", options: ["", "", "", ""], correct_index: 0 }));
 
 export function ModulesManager({
   open,
@@ -355,6 +365,37 @@ function LessonDialog({
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [quizEnabled, setQuizEnabled] = useState(lesson?.quiz_enabled ?? false);
+  const [questions, setQuestions] = useState<QuizQuestion[]>(emptyQuestions());
+
+  useEffect(() => {
+    if (!lesson?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("lesson_questions")
+        .select("*")
+        .eq("lesson_id", lesson.id)
+        .order("sort_order");
+      if (data && data.length > 0) {
+        const loaded = emptyQuestions();
+        data.slice(0, 5).forEach((q: any, i: number) => {
+          loaded[i] = {
+            question: q.question ?? "",
+            options: [0, 1, 2, 3].map((j) => q.options?.[j] ?? ""),
+            correct_index: q.correct_index ?? 0,
+          };
+        });
+        setQuestions(loaded);
+      }
+    })();
+  }, [lesson?.id]);
+
+  const updateQuestion = (qi: number, patch: Partial<QuizQuestion>) =>
+    setQuestions((prev) => prev.map((q, i) => (i === qi ? { ...q, ...patch } : q)));
+  const updateOption = (qi: number, oi: number, val: string) =>
+    setQuestions((prev) =>
+      prev.map((q, i) => (i === qi ? { ...q, options: q.options.map((o, j) => (j === oi ? val : o)) } : q)),
+    );
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -384,6 +425,16 @@ function LessonDialog({
 
   const save = async () => {
     if (!title.trim()) return toast.error("Título obrigatório");
+
+    if (quizEnabled) {
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (!q.question.trim()) return toast.error(`Pergunta ${i + 1}: digite o enunciado.`);
+        if (q.options.some((o) => !o.trim())) return toast.error(`Pergunta ${i + 1}: preencha as 4 alternativas.`);
+        if (!q.options[q.correct_index]?.trim()) return toast.error(`Pergunta ${i + 1}: marque a alternativa correta.`);
+      }
+    }
+
     setSaving(true);
     const payload = {
       course_id: courseId,
@@ -392,12 +443,36 @@ function LessonDialog({
       description: description.trim() || null,
       duration_minutes: Number(duration) || 0,
       video_url: videoUrl.trim() || null,
+      quiz_enabled: quizEnabled,
     };
-    const { error } = lesson
-      ? await supabase.from("lessons").update(payload).eq("id", lesson.id)
-      : await supabase.from("lessons").insert({ ...payload, sort_order: nextSort });
+
+    let lessonId = lesson?.id;
+    if (lesson) {
+      const { error } = await supabase.from("lessons").update(payload).eq("id", lesson.id);
+      if (error) { setSaving(false); return toast.error(error.message); }
+    } else {
+      const { data, error } = await supabase.from("lessons").insert({ ...payload, sort_order: nextSort }).select("id").single();
+      if (error || !data) { setSaving(false); return toast.error(error?.message || "Erro ao criar aula"); }
+      lessonId = data.id;
+    }
+
+    // Sincroniza as perguntas da prova
+    if (lessonId) {
+      await supabase.from("lesson_questions").delete().eq("lesson_id", lessonId);
+      if (quizEnabled) {
+        const rows = questions.map((q, i) => ({
+          lesson_id: lessonId!,
+          question: q.question.trim(),
+          options: q.options.map((o) => o.trim()),
+          correct_index: q.correct_index,
+          sort_order: i,
+        }));
+        const { error: qErr } = await supabase.from("lesson_questions").insert(rows);
+        if (qErr) { setSaving(false); return toast.error("Erro ao salvar prova: " + qErr.message); }
+      }
+    }
+
     setSaving(false);
-    if (error) return toast.error(error.message);
     toast.success(lesson ? "Aula atualizada" : "Aula criada");
     onSaved();
   };
@@ -474,6 +549,50 @@ function LessonDialog({
                   onChange={(e) => setVideoUrl(e.target.value)}
                 />
               </>
+            )}
+          </div>
+
+          {/* Prova / Quiz da aula */}
+          <div className="space-y-3 rounded-2xl border border-border/60 bg-surface/40 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <ClipboardCheck className="h-3.5 w-3.5" /> Prova para concluir a aula
+              </Label>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant={quizEnabled ? "default" : "outline"} className="rounded-full" onClick={() => setQuizEnabled(true)}>Ativada</Button>
+                <Button type="button" size="sm" variant={!quizEnabled ? "default" : "outline"} className="rounded-full" onClick={() => setQuizEnabled(false)}>Desativada</Button>
+              </div>
+            </div>
+
+            {quizEnabled && (
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  O aluno só conclui a aula se acertar as 5 perguntas. Preencha as 4 alternativas e clique no círculo para marcar a correta.
+                </p>
+                {questions.map((q, qi) => (
+                  <div key={qi} className="space-y-2 rounded-xl border border-border/60 bg-card p-3">
+                    <Label className="text-xs font-bold text-primary">Pergunta {qi + 1}</Label>
+                    <Input value={q.question} onChange={(e) => updateQuestion(qi, { question: e.target.value })} placeholder="Enunciado da pergunta" />
+                    <div className="space-y-1.5">
+                      {q.options.map((opt, oi) => (
+                        <div key={oi} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateQuestion(qi, { correct_index: oi })}
+                            title="Marcar como correta"
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition ${
+                              q.correct_index === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-transparent hover:border-emerald-500/50"
+                            }`}
+                          >
+                            ✓
+                          </button>
+                          <Input value={opt} onChange={(e) => updateOption(qi, oi, e.target.value)} placeholder={`Alternativa ${oi + 1}`} className="h-9" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

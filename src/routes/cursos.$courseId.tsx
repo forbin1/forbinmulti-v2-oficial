@@ -18,6 +18,8 @@ import {
   Circle,
   FileText,
   X,
+  ClipboardCheck,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -60,6 +62,14 @@ type Lesson = {
   video_url: string | null;
   duration_minutes: number | null;
   sort_order: number;
+  quiz_enabled?: boolean;
+};
+
+type QuizQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  correct_index: number;
 };
 
 type Certificate = { id: string; certificate_code: string; issued_at: string };
@@ -84,6 +94,7 @@ function CourseDetailPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [isMaterialOpen, setIsMaterialOpen] = useState(false);
+  const [quizLesson, setQuizLesson] = useState<Lesson | null>(null);
 
   useEffect(() => {
     void loadAll();
@@ -187,11 +198,24 @@ function CourseDetailPage() {
       return;
     }
 
+    // Se a aula exige prova, abre o quiz em vez de concluir direto (admin não precisa).
+    const lesson = lessons.find((l) => l.id === lessonId);
+    const isAdmin = user.email === "admin@gmail.com";
+    if (lesson?.quiz_enabled && !isAdmin) {
+      setQuizLesson(lesson);
+      return;
+    }
+
+    await finalizeComplete(lessonId);
+  }
+
+  async function finalizeComplete(lessonId: string) {
+    if (!user) return;
     const { error } = await supabase.from("lesson_progress").upsert(
       { user_id: user.id, lesson_id: lessonId, completed: true, completed_at: new Date().toISOString() },
       { onConflict: "user_id,lesson_id" },
     );
-    
+
     if (error) {
       console.error("Error saving progress:", error);
       toast.error("Erro ao salvar progresso: " + error.message);
@@ -443,7 +467,11 @@ function CourseDetailPage() {
                         {completed.has(currentLesson.id) ? (
                           <><CheckCircle2 className="mr-2 h-4 w-4" /> Aula concluída</>
                         ) : (isEmbed || watched.has(currentLesson.id)) ? (
-                          <><Circle className="mr-2 h-4 w-4 animate-pulse" /> Concluir aula (Checklist)</>
+                          currentLesson.quiz_enabled ? (
+                            <><ClipboardCheck className="mr-2 h-4 w-4" /> Concluir aula (Prova)</>
+                          ) : (
+                            <><Circle className="mr-2 h-4 w-4 animate-pulse" /> Concluir aula</>
+                          )
                         ) : (
                           <><Lock className="mr-2 h-4 w-4" /> Assista o vídeo para liberar</>
                         )}
@@ -663,6 +691,20 @@ function CourseDetailPage() {
         />
       )}
 
+      {/* Prova da aula */}
+      {quizLesson && (
+        <QuizScreen
+          lesson={quizLesson}
+          onClose={() => setQuizLesson(null)}
+          onPass={async () => {
+            const id = quizLesson.id;
+            setQuizLesson(null);
+            await finalizeComplete(id);
+            toast.success("Prova aprovada! Aula concluída. 🎉");
+          }}
+        />
+      )}
+
       {/* Visualizador de Material em Tela Cheia */}
       {isMaterialOpen && materialUrl && (
         <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm animate-fade-in">
@@ -755,6 +797,114 @@ function CourseDetailPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () => void; onPass: () => void }) {
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("lesson_questions")
+        .select("*")
+        .eq("lesson_id", lesson.id)
+        .order("sort_order");
+      setQuestions((data as unknown as QuizQuestion[]) || []);
+      setLoading(false);
+    })();
+  }, [lesson.id]);
+
+  const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined);
+
+  const submit = () => {
+    if (!allAnswered) return toast.error("Responda todas as perguntas.");
+    setSubmitting(true);
+    const correct = questions.filter((q) => answers[q.id] === q.correct_index).length;
+    setSubmitting(false);
+    if (correct === questions.length) {
+      onPass();
+    } else {
+      toast.error(`Você acertou ${correct} de ${questions.length}. Revise a aula e tente novamente.`);
+      setAnswers({});
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <ClipboardCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Prova da aula</h3>
+            <p className="text-xs text-muted-foreground">{lesson.title}</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-2xl space-y-5">
+          <p className="text-sm text-muted-foreground">
+            Responda corretamente todas as perguntas para concluir a aula.
+          </p>
+          {loading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : questions.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
+              Esta prova ainda não tem perguntas cadastradas. Avise o administrador.
+            </p>
+          ) : (
+            questions.map((q, qi) => (
+              <div key={q.id} className="rounded-2xl border border-border/60 bg-card p-5">
+                <p className="font-semibold">{qi + 1}. {q.question}</p>
+                <div className="mt-3 space-y-2">
+                  {q.options.map((opt, oi) => {
+                    const selected = answers[q.id] === oi;
+                    return (
+                      <button
+                        key={oi}
+                        type="button"
+                        onClick={() => setAnswers((a) => ({ ...a, [q.id]: oi }))}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition",
+                          selected ? "border-primary bg-primary/10 font-semibold" : "border-border bg-surface hover:border-primary/40",
+                        )}
+                      >
+                        <span className={cn(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold",
+                          selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 text-muted-foreground",
+                        )}>
+                          {String.fromCharCode(65 + oi)}
+                        </span>
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-border/60 p-4">
+        <div className="mx-auto flex max-w-2xl gap-3">
+          <Button variant="outline" className="flex-1 rounded-full" onClick={onClose}>Cancelar</Button>
+          <Button className="flex-1 rounded-full" disabled={loading || submitting || questions.length === 0} onClick={submit}>
+            Enviar respostas
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
