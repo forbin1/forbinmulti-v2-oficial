@@ -33,7 +33,7 @@ export const Route = createFileRoute("/admin")({
 
     const user = session?.user ?? null;
     if (!user) throw redirect({ to: "/login" });
-    if (user.email === "admin@gmail.com") return;
+    // Acesso ao painel admin somente para quem tem o papel "admin".
     const { data: roleRow } = await supabase
       .from("user_roles")
       .select("role")

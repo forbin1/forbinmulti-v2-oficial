@@ -48,13 +48,10 @@ const NAV_COMPANY: NavItem[] = [
 
 const NAV_ADMIN: NavItem[] = [
   { to: "/admin", label: "Painel Admin" },
-  { to: "/empresa", label: "Painel Empresa" },
   { to: "/vagas", label: "Vagas" },
   { to: "/profissionais-ativos", label: "Profissionais" },
   { to: "/cursos", label: "Cursos" },
   { to: "/feed", label: "Experiências" },
-  { to: "/candidaturas", label: "Candidaturas" },
-  { to: "/favoritos", label: "Favoritos" },
 ];
 
 function NotificationsContent({ notifications, unreadCount, markRead, markAllRead }: any) {
@@ -203,20 +200,18 @@ export function SiteHeader() {
     navigate({ to: "/" });
   };
 
-  const isAdminUser = user?.email === "admin@gmail.com";
-
   const nav: NavItem[] = !user
     ? NAV_LOGGED_OUT
-    : (role === "admin" || isAdminUser)
+    : (role === "admin")
     ? NAV_ADMIN
     : role === "company"
     ? NAV_COMPANY
     : NAV_PROFESSIONAL;
 
   const dashboardLink =
-    (role === "admin" || isAdminUser) ? "/admin" : role === "company" ? "/empresa" : "/profissional";
+    (role === "admin") ? "/admin" : role === "company" ? "/empresa" : "/profissional";
   const dashboardLabel =
-    (role === "admin" || isAdminUser) ? "Painel Admin" : role === "company" ? "Painel Empresa" : "Meu Perfil";
+    (role === "admin") ? "Painel Admin" : role === "company" ? "Painel Empresa" : "Meu Perfil";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-xl">
@@ -348,31 +343,13 @@ export function SiteHeader() {
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  {role === "admin" || isAdminUser ? (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer">
-                          <Shield className="mr-2 h-4 w-4 text-primary" />
-                          Painel Admin
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/empresa" className="cursor-pointer">
-                          <Building2 className="mr-2 h-4 w-4" />
-                          Painel Empresa
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link 
-                          to={companyUsername ? "/perfil/$username" : "/perfil-empresa"} 
-                          params={companyUsername ? { username: companyUsername } : undefined} 
-                          className="cursor-pointer"
-                        >
-                          <User className="mr-2 h-4 w-4" />
-                          Meu Perfil
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
+                  {role === "admin" ? (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="cursor-pointer">
+                        <Shield className="mr-2 h-4 w-4 text-primary" />
+                        Painel Admin
+                      </Link>
+                    </DropdownMenuItem>
                   ) : (
                     <>
                       <DropdownMenuItem asChild>
@@ -480,53 +457,24 @@ export function SiteHeader() {
                         {item.label}
                       </Link>
                     ))}
-                    {user && (role === "admin" || isAdminUser) ? (
-                      <>
-                        <Link
-                          to="/admin"
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          Painel Admin
-                        </Link>
-                        <Link
-                          to="/empresa"
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          Painel Empresa
-                        </Link>
-                        <Link
-                          to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
-                          params={companyUsername ? { username: companyUsername } : undefined}
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          Meu Perfil
-                        </Link>
-                      </>
-                    ) : (
-                      <>
-                        {user && (
-                          <Link
-                            to={dashboardLink}
-                            onClick={() => setOpen(false)}
-                            className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                          >
-                            {dashboardLabel}
-                          </Link>
-                        )}
-                        {user && role === "company" && (
-                          <Link
-                            to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
-                            params={companyUsername ? { username: companyUsername } : undefined}
-                            onClick={() => setOpen(false)}
-                            className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
-                          >
-                            Meu Perfil
-                          </Link>
-                        )}
-                      </>
+                    {user && role !== "admin" && role !== "company" && (
+                      <Link
+                        to="/profissional"
+                        onClick={() => setOpen(false)}
+                        className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        Meu Perfil
+                      </Link>
+                    )}
+                    {user && role === "company" && (
+                      <Link
+                        to={companyUsername ? "/perfil/$username" : "/perfil-empresa"}
+                        params={companyUsername ? { username: companyUsername } : undefined}
+                        onClick={() => setOpen(false)}
+                        className="rounded-lg px-4 py-3 text-base text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        Perfil Público
+                      </Link>
                     )}
                     {user && (
                       <Link
