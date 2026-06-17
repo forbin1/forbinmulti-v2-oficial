@@ -31,6 +31,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { computeLevel, LEVEL_META, ESCOLARIDADE_OPTIONS } from "@/lib/professional-level";
 import { LevelBadge } from "@/components/LevelBadge";
+import { ProfileHeader } from "@/components/ProfileHeader";
 import {
   ExperienceDialog, ExperienceList, AddExperienceButton, toMonthInput, toDbDate, type ExperienceDraft,
 } from "@/components/ProfessionalExperiences";
@@ -278,109 +279,48 @@ function PerfilProfissional() {
 
   return (
     <div className="pb-16 sm:pb-0">
-      {/* Banner / Capa */}
-      <div className="group relative h-44 overflow-hidden border-b border-border/60 sm:h-64 lg:h-80">
-        {profile.cover_url ? (
-          <img src={profile.cover_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 bg-neutral-900">
-             <div className="absolute inset-0 bg-gradient-gold opacity-10" />
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-primary/10" />
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-          <Button variant="secondary" className="rounded-full shadow-lg" onClick={() => coverInputRef.current?.click()} disabled={!!uploading}>
-            {uploading === "cover" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
-            Alterar Capa
-          </Button>
-        </div>
-        <input ref={coverInputRef} type="file" hidden accept="image/*" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "cover")} />
-      </div>
-
       {/* Conteúdo principal */}
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-8 lg:px-8">
 
-        {/* Card de perfil */}
-        <div className="-mt-16 sm:-mt-20 relative z-10 rounded-2xl border border-white/10 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl sm:rounded-3xl sm:p-8">
-          {/* Avatar + info + ações */}
-          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-end sm:gap-6 sm:text-left">
-            {/* Avatar */}
-            <div className="group relative shrink-0">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-xl sm:h-32 sm:w-32 sm:border-8 sm:text-5xl">
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                ) : initials}
-              </div>
-              <button
-                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition group-hover:opacity-100"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!!uploading}
-              >
-                {uploading === "avatar" ? <Loader2 className="h-6 w-6 animate-spin text-white" /> : <Camera className="h-8 w-8 text-white" />}
-              </button>
-              <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "avatar")} />
-            </div>
-
-            {/* Nome e meta */}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl">{profile.full_name}</h1>
-                {profile.is_verified && (
-                  <Badge className="rounded-full border-success/40 bg-success/20 text-success px-3 py-1 text-xs font-bold">
-                    <ShieldCheck className="mr-1 h-3 w-3" /> Verificado
-                  </Badge>
-                )}
-                {level.tier !== "none" && <LevelBadge tier={level.tier} size="md" />}
-              </div>
-              <p className="mt-1 text-sm font-medium text-muted-foreground/80 sm:text-base">
-                {profile.role || "Profissional de Segurança"}{profile.experience_years ? ` · ${profile.experience_years} anos de exp.` : ""}
-              </p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground/70 sm:justify-start sm:text-sm">
-                {profile.city && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-primary" /> {profile.city}, {profile.state}</span>}
-                <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-primary" /> {user?.email}</span>
-                {profile.phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-primary" /> {profile.phone}</span>}
-              </div>
-            </div>
-
-            {/* Ações */}
-            <div className="flex flex-wrap justify-center gap-2 sm:shrink-0">
-              <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="rounded-full border-primary/40 bg-primary/5 px-5 font-bold hover:bg-primary/10 sm:h-10 sm:px-6">
-                <Pencil className="mr-1.5 h-4 w-4" /> Editar Perfil
-              </Button>
-              {profile.whatsapp && (
-                <Button asChild size="sm" className="rounded-full bg-[#25D366] px-5 font-bold text-white shadow-lg shadow-[#25D366]/20 hover:bg-[#1ebe5a] sm:h-10 sm:px-6">
-                  <a href={`https://wa.me/55${profile.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                    <WhatsAppIcon className="mr-1.5 h-4 w-4" /> WhatsApp
-                  </a>
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Redes sociais */}
-          {(profile.linkedin_url || profile.instagram_url || profile.website_url) && (
-            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
-              {profile.linkedin_url && <SocialChip icon={Linkedin} label="LinkedIn" />}
-              {profile.instagram_url && <SocialChip icon={Instagram} label="Instagram" />}
-              {profile.website_url && <SocialChip icon={Globe} label="Site" />}
-            </div>
-          )}
-
-          {/* Stats */}
-          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-5 text-center sm:grid-cols-4">
-            <Stat label="Cursos" value={String(coursesCount)} />
-            <Stat label="Experiência" value={profile.experience_years ? `${profile.experience_years}a` : "—"} />
-            <Stat label="Postos" value={profile.specializations?.[1] || "0"} />
-            <Stat label="Avaliação" value="5.0 ★" />
-          </div>
-        </div>
+        {/* Cabeçalho do perfil */}
+        <ProfileHeader
+          name={profile.full_name}
+          initials={initials}
+          eyebrow="Profissional"
+          subtitle={`${profile.role || "Profissional de Segurança"}${profile.experience_years ? ` · ${profile.experience_years} anos de exp.` : ""}`}
+          avatarUrl={profile.avatar_url}
+          coverUrl={profile.cover_url}
+          verified={profile.is_verified}
+          levelTier={level.tier}
+          whatsapp={profile.whatsapp}
+          isOwner
+          uploading={uploading}
+          onPickAvatar={(f) => handleUpload(f, "avatar")}
+          onPickCover={(f) => handleUpload(f, "cover")}
+          meta={[
+            ...(profile.city ? [{ icon: MapPin, text: `${profile.city}, ${profile.state ?? ""}` }] : []),
+            ...(user?.email ? [{ icon: Mail, text: user.email }] : []),
+            ...(profile.phone ? [{ icon: Phone, text: profile.phone }] : []),
+          ]}
+          stats={[
+            { label: "Cursos", value: String(coursesCount) },
+            { label: "Experiência", value: profile.experience_years ? `${profile.experience_years}a` : "—" },
+            { label: "Postos", value: profile.specializations?.[1] || "0" },
+            { label: "Avaliação", value: "5.0 ★" },
+          ]}
+          actions={
+            <Button onClick={() => setIsEditing(true)} variant="outline" className="h-11 rounded-full border-primary/40 bg-primary/5 px-5 font-bold hover:bg-primary/10">
+              <Pencil className="mr-1.5 h-4 w-4" /> Editar Perfil
+            </Button>
+          }
+        />
 
         {/* Grid de conteúdo */}
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px]">
           {/* Coluna principal */}
           <div className="min-w-0 space-y-6">
             <Tabs defaultValue="sobre">
-              <TabsList className="flex h-auto w-full gap-1.5 rounded-2xl bg-card/50 p-1.5 backdrop-blur-md">
+              <TabsList className="flex h-auto w-full gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
                 <TabsTrigger value="sobre" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Sobre</TabsTrigger>
                 <TabsTrigger value="experiencias" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Experiências</TabsTrigger>
                 <TabsTrigger value="publicacoes" className="flex-1 rounded-xl py-2.5 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">Publicações</TabsTrigger>
@@ -399,7 +339,7 @@ function PerfilProfissional() {
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {userCourses.map((c) => (
-                        <div key={c.title} className="flex items-center justify-between rounded-xl border border-white/5 bg-card/60 p-3.5 backdrop-blur-md hover:border-primary/20 hover:bg-primary/5 transition-all duration-300">
+                        <div key={c.title} className="flex items-center justify-between rounded-xl border border-border bg-surface p-3.5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300">
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                               <GraduationCap className="h-5 w-5" />
@@ -735,7 +675,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-card/40 p-5 backdrop-blur-sm sm:rounded-3xl sm:p-7">
+    <div className="rounded-2xl border border-border bg-card p-5 sm:rounded-3xl sm:p-7">
       <h3 className="mb-4 font-display text-lg font-bold tracking-tight sm:mb-5 sm:text-xl">{title}</h3>
       {children}
     </div>

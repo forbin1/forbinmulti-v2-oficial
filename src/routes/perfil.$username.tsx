@@ -14,9 +14,9 @@ import {
   Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { ProfileHeader } from "@/components/ProfileHeader";
 
 export const Route = createFileRoute("/perfil/$username")({
   loader: async ({ params }) => {
@@ -146,51 +146,40 @@ function EmpresaPublicProfile() {
     });
   }
 
-  const coverInput = useRef<HTMLInputElement>(null);
-  const avatarInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
 
-  const onPick = async (e: React.ChangeEvent<HTMLInputElement>, kind: "cover" | "avatar") => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    
+  const handlePick = async (file: File, kind: "cover" | "avatar") => {
     try {
+      setUploading(kind);
       toast.info("Processando e otimizando imagem...");
       const reader = new FileReader();
       reader.onload = async () => {
         let base64 = reader.result as string;
-        
         try {
-          if (kind === "avatar") {
-            base64 = await resizeImageBase64(base64, 256, 256);
-          } else {
-            base64 = await resizeImageBase64(base64, 1200, 600);
-          }
+          base64 = kind === "avatar"
+            ? await resizeImageBase64(base64, 256, 256)
+            : await resizeImageBase64(base64, 1200, 600);
         } catch (resizeErr) {
           console.warn("Error resizing image, using original:", resizeErr);
         }
 
-        if (kind === "avatar") {
-          const { error } = await supabase
-            .from("companies")
-            .update({ logo_url: base64 })
-            .eq("user_id", company.user_id);
+        const column = kind === "avatar" ? "logo_url" : "cover_url";
+        const { error } = await supabase
+          .from("companies")
+          .update({ [column]: base64 })
+          .eq("user_id", company.user_id);
 
-          if (error) throw error;
-          setCompany((prev: any) => ({ ...prev, logo_url: base64 }));
-          toast.success("Foto de perfil atualizada!");
-        } else {
-          const { error } = await supabase
-            .from("companies")
-            .update({ cover_url: base64 })
-            .eq("user_id", company.user_id);
-
-          if (error) throw error;
-          setCompany((prev: any) => ({ ...prev, cover_url: base64 }));
-          toast.success("Foto de capa atualizada!");
+        setUploading(null);
+        if (error) {
+          toast.error("Erro ao atualizar imagem: " + error.message);
+          return;
         }
+        setCompany((prev: any) => ({ ...prev, [column]: base64 }));
+        toast.success(kind === "avatar" ? "Foto de perfil atualizada!" : "Foto de capa atualizada!");
       };
       reader.readAsDataURL(file);
     } catch (err: any) {
+      setUploading(null);
       toast.error("Erro ao atualizar imagem: " + err.message);
     }
   };
@@ -205,74 +194,43 @@ function EmpresaPublicProfile() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 bg-background text-foreground">
-      {/* Capa */}
-      <div className="relative mb-[-72px] h-44 overflow-hidden rounded-3xl border border-border/60 sm:h-56 bg-surface">
-        {company.cover_url ? (
-          <img src={company.cover_url} alt="Capa" className="h-full w-full object-cover" />
-        ) : (
+      {/* Cabeçalho da empresa */}
+      <ProfileHeader
+        name={name}
+        initials={name.charAt(0).toUpperCase()}
+        eyebrow="Empresa"
+        avatarUrl={avatar}
+        coverUrl={company.cover_url}
+        verified
+        verifiedLabel="Verificada FORBIN"
+        whatsapp={phone !== "Não cadastrado" ? phone : null}
+        isOwner={isOwner}
+        uploading={uploading}
+        onPickAvatar={(f) => handlePick(f, "avatar")}
+        onPickCover={(f) => handlePick(f, "cover")}
+        meta={[
+          { icon: MapPin, text: `${city}${state ? `, ${state}` : ""}` },
+          { icon: Building2, text: `CNPJ ${cnpj}` },
+          ...(website !== "Não cadastrado" ? [{ icon: Globe, text: website }] : []),
+          ...(phone !== "Não cadastrado" ? [{ icon: Phone, text: phone }] : []),
+        ]}
+        stats={[
+          { label: "Vagas", value: String(jobs.length) },
+          { label: "Colaboradores", value: company.employee_count ? String(company.employee_count) : "—" },
+        ]}
+        actions={
           <>
-            <div className="absolute inset-0 bg-gradient-gold opacity-25" />
-            <div className="absolute inset-0 bg-radial-gold" />
-          </>
-        )}
-        {isOwner && (
-          <>
-            <button onClick={() => coverInput.current?.click()} className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-black/80">
-              <Camera className="h-4 w-4" /> Alterar Capa
-            </button>
-            <input ref={coverInput} type="file" accept="image/*" hidden onChange={(e) => onPick(e, "cover")} />
-          </>
-        )}
-      </div>
-
-      {/* Header card da empresa */}
-      <div className="relative rounded-3xl border border-border/60 bg-card/85 p-6 shadow-elevated backdrop-blur-xl sm:p-8">
-        <div className="flex flex-wrap items-start gap-6">
-          <div className="relative">
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-gradient-gold font-display text-3xl font-extrabold text-primary-foreground shadow-gold sm:h-32 sm:w-32">
-              {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover rounded-full" /> : name.charAt(0).toUpperCase()}
-            </div>
-            {isOwner && (
-              <>
-                <button onClick={() => avatarInput.current?.click()} className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow hover:bg-primary/90">
-                  <Camera className="h-4 w-4" />
-                </button>
-                <input ref={avatarInput} type="file" accept="image/*" hidden onChange={(e) => onPick(e, "avatar")} />
-              </>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Empresa</p>
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{name}</h1>
-              <Badge className="rounded-full border-success/40 bg-success/15 text-success">
-                <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Verificada FORBIN
-              </Badge>
-            </div>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              {company.description || "Nenhuma descrição informada."}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-primary" /> {city}{state ? `, ${state}` : ""}</span>
-              <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 text-primary" /> CNPJ {cnpj}</span>
-              <span className="flex items-center gap-1.5"><Globe className="h-4 w-4 text-primary" /> {website}</span>
-              <span className="flex items-center gap-1.5"><Phone className="h-4 w-4 text-primary" /> {phone}</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
             {isOwner && (
               <Button asChild className="h-11 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-gold hover:bg-primary/90">
-                <Link to="/empresa">
-                  Painel da Empresa
-                </Link>
+                <Link to="/empresa">Painel da Empresa</Link>
               </Button>
             )}
             <Button variant="outline" size="icon" onClick={handleShare} className="h-11 w-11 rounded-full">
               <Share2 className="h-4 w-4" />
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Tabs Menu */}
       <div className="mt-10 flex gap-2 border-b border-border/60 pb-px">
