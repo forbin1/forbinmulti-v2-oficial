@@ -47,6 +47,12 @@ function CadastroProfissional() {
   const [escolaridade, setEscolaridade] = useState("");
   const [hasCnv, setHasCnv] = useState<boolean | null>(null);
   const [servedMilitary, setServedMilitary] = useState<boolean | null>(null);
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [estadoCivil, setEstadoCivil] = useState("");
+  const [altura, setAltura] = useState("");
+  const [peso, setPeso] = useState("");
+  const [hasCnh, setHasCnh] = useState(false);
+  const [disponibilidadeViagem, setDisponibilidadeViagem] = useState(false);
   const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
   const [expDialogOpen, setExpDialogOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<ExperienceDraft | null>(null);
@@ -125,6 +131,12 @@ function CadastroProfissional() {
             escolaridade: escolaridade || null,
             has_cnv: hasCnv ?? false,
             served_military: servedMilitary,
+            data_nascimento: dataNascimento || null,
+            estado_civil: estadoCivil || null,
+            altura: altura || null,
+            peso: peso || null,
+            has_cnh: hasCnh,
+            disponibilidade_viagem: disponibilidadeViagem,
           } as any)
           .eq("user_id", userId);
 
@@ -269,15 +281,16 @@ function CadastroProfissional() {
             <h2 className="font-display text-2xl font-bold">Conte sobre você</h2>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="CPF"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="000.000.000-00" /></Field>
-              <Field label="Data de nascimento"><Input type="date" className="h-12 rounded-xl bg-surface text-base" /></Field>
+              <Field label="Data de nascimento"><Input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className="h-12 rounded-xl bg-surface text-base" /></Field>
               <Field label="WhatsApp *"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="(11) 99999-0000" /></Field>
               <Field label="Estado civil">
-                <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
-                  <option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option>
+                <select value={estadoCivil} onChange={(e) => setEstadoCivil(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base">
+                  <option value="">Selecione</option>
+                  <option value="Solteiro(a)">Solteiro(a)</option><option value="Casado(a)">Casado(a)</option><option value="Divorciado(a)">Divorciado(a)</option><option value="Viúvo(a)">Viúvo(a)</option><option value="União Estável">União Estável</option>
                 </select>
               </Field>
-              <Field label="Altura (cm)"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="180" /></Field>
-              <Field label="Peso (kg)"><Input className="h-12 rounded-xl bg-surface text-base" placeholder="80" /></Field>
+              <Field label="Altura (cm)"><Input value={altura} onChange={(e) => setAltura(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="180" /></Field>
+              <Field label="Peso (kg)"><Input value={peso} onChange={(e) => setPeso(e.target.value)} className="h-12 rounded-xl bg-surface text-base" placeholder="80" /></Field>
             </div>
             <Field label="Já serviu o quartel?">
               <div className="flex gap-3">
@@ -309,13 +322,13 @@ function CadastroProfissional() {
               </div>
               <Field label="Disponibilidade para viagem">
                 <div className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-                  <Checkbox id="viagem" />
+                  <Checkbox id="viagem" checked={disponibilidadeViagem} onCheckedChange={(v) => setDisponibilidadeViagem(v === true)} />
                   <Label htmlFor="viagem" className="cursor-pointer text-base">Aceito viajar a trabalho</Label>
                 </div>
               </Field>
-              <Field label="Possui CNH?">
+              <Field label="Possui CNH? (Habilitação)">
                 <div className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-                  <Checkbox id="cnh" />
+                  <Checkbox id="cnh" checked={hasCnh} onCheckedChange={(v) => setHasCnh(v === true)} />
                   <Label htmlFor="cnh" className="cursor-pointer text-base">Sim, categoria B ou superior</Label>
                 </div>
               </Field>

@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computeLevel } from "@/lib/professional-level";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ExperienceList, toMonthInput, type ExperienceDraft } from "@/components/ProfessionalExperiences";
+import { ProfessionalInfo } from "@/components/ProfessionalInfo";
 
 export const Route = createFileRoute("/u/$handle")({
   head: ({ params }) => ({
@@ -88,6 +89,17 @@ function PerfilUsuario() {
               escolaridade: (data as any).escolaridade || null,
               has_cnv: (data as any).has_cnv ?? null,
               specializations: data.specializations || [],
+              city: data.city || null,
+              state: data.state || null,
+              phone: data.phone || null,
+              cnv_number: (data as any).cnv_number || null,
+              has_cnh: (data as any).has_cnh ?? null,
+              altura: (data as any).altura || null,
+              peso: (data as any).peso || null,
+              data_nascimento: (data as any).data_nascimento || null,
+              estado_civil: (data as any).estado_civil || null,
+              served_military: (data as any).served_military ?? null,
+              disponibilidade_viagem: (data as any).disponibilidade_viagem ?? null,
             });
             setCover(data.cover_url || null);
             setAvatar(data.avatar_url || null);
@@ -286,6 +298,35 @@ function PerfilUsuario() {
 
           {profile.bio && <p className="mt-6 text-foreground/80">{profile.bio}</p>}
         </div>
+
+        {profile.kind === "professional" && (
+          <div className="mt-6">
+            <Card title="Informações do Profissional">
+              <ProfessionalInfo
+                profile={{
+                  full_name: profile.name,
+                  city: profile.city,
+                  state: profile.state,
+                  role: profile.role,
+                  experience_years: profile.experience_years,
+                  escolaridade: profile.escolaridade,
+                  estado_civil: profile.estado_civil,
+                  altura: profile.altura,
+                  peso: profile.peso,
+                  data_nascimento: profile.data_nascimento,
+                  has_cnv: profile.has_cnv,
+                  cnv_number: profile.cnv_number,
+                  has_cnh: profile.has_cnh,
+                  served_military: profile.served_military,
+                  disponibilidade_viagem: profile.disponibilidade_viagem,
+                  phone: profile.phone,
+                  whatsapp: profile.whatsapp,
+                  specializations: profile.specializations,
+                }}
+              />
+            </Card>
+          </div>
+        )}
 
         {profile.kind === "professional" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

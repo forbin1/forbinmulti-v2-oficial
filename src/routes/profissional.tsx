@@ -31,6 +31,7 @@ import { ptBR } from "date-fns/locale";
 import { computeLevel, LEVEL_META, ESCOLARIDADE_OPTIONS, type LevelTier } from "@/lib/professional-level";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ProfileHeader } from "@/components/ProfileHeader";
+import { ProfessionalInfo } from "@/components/ProfessionalInfo";
 import {
   ExperienceDialog, ExperienceList, AddExperienceButton, toMonthInput, toDbDate, type ExperienceDraft,
 } from "@/components/ProfessionalExperiences";
@@ -65,6 +66,14 @@ type Profile = {
   specializations: string[] | null;
   escolaridade: string | null;
   has_cnv: boolean | null;
+  cnv_number: string | null;
+  altura: string | null;
+  peso: string | null;
+  data_nascimento: string | null;
+  estado_civil: string | null;
+  has_cnh: boolean | null;
+  served_military: boolean | null;
+  disponibilidade_viagem: boolean | null;
 };
 
 function PerfilProfissional() {
@@ -326,10 +335,29 @@ function PerfilProfissional() {
               </TabsList>
 
               <TabsContent value="sobre" className="mt-5 space-y-5">
+                {/* Nível do Profissional — acima do resumo */}
+                <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 to-primary/5 p-5 sm:rounded-3xl sm:p-7">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="font-display text-lg font-bold sm:text-xl">Nível do Profissional</h3>
+                    <LevelBadge tier={level.tier} size="lg" />
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{LEVEL_META[level.tier].description}</p>
+                  <div className="mt-4 grid gap-1.5 border-t border-white/5 pt-4 text-xs text-muted-foreground sm:grid-cols-2">
+                    <LevelCriterion ok={level.facts.hasFormacao} label="Curso de Formação de Vigilante" />
+                    <LevelCriterion ok={level.facts.experienceYears >= 1} label={`Experiência (${level.facts.experienceYears} ${level.facts.experienceYears === 1 ? "ano" : "anos"})`} />
+                    <LevelCriterion ok={level.facts.experienceCount > 0} label={`Experiências cadastradas (${level.facts.experienceCount})`} />
+                    <LevelCriterion ok={level.facts.hasSpecialty} label="Especialização (Escolta, SPP, CFTV...)" />
+                  </div>
+                </div>
+
                 <Card title="Resumo profissional">
                   <p className="leading-relaxed text-muted-foreground whitespace-pre-wrap">
                     {profile.bio || "Nenhum resumo cadastrado."}
                   </p>
+                </Card>
+
+                <Card title="Informações do Profissional">
+                  <ProfessionalInfo profile={profile} />
                 </Card>
 
                 <Card title="Cursos & Formações">
@@ -415,22 +443,6 @@ function PerfilProfissional() {
                 </div>
               </div>
             </Card>
-
-            <div className="rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 p-6 border border-primary/20 sm:rounded-3xl sm:p-8">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-display text-lg font-bold">Nível do Profissional</h3>
-                <LevelBadge tier={level.tier} size="md" />
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {LEVEL_META[level.tier].description}
-              </p>
-              <div className="mt-4 space-y-1.5 border-t border-white/5 pt-4 text-xs text-muted-foreground">
-                <LevelCriterion ok={level.facts.hasFormacao} label="Curso de Formação de Vigilante" />
-                <LevelCriterion ok={level.facts.experienceYears >= 1} label={`Experiência registrada (${level.facts.experienceYears} ${level.facts.experienceYears === 1 ? "ano" : "anos"})`} />
-                <LevelCriterion ok={level.facts.experienceCount > 0} label={`Experiências cadastradas (${level.facts.experienceCount})`} />
-                <LevelCriterion ok={level.facts.hasSpecialty} label="Especialização (Escolta, SPP, CFTV, etc.)" />
-              </div>
-            </div>
           </aside>
         </div>
       </div>
@@ -505,6 +517,13 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
         website_url: form.website_url,
         escolaridade: form.escolaridade || null,
         has_cnv: form.has_cnv ?? false,
+        cnv_number: form.cnv_number || null,
+        altura: form.altura || null,
+        peso: form.peso || null,
+        data_nascimento: form.data_nascimento || null,
+        estado_civil: form.estado_civil || null,
+        has_cnh: form.has_cnh ?? false,
+        disponibilidade_viagem: form.disponibilidade_viagem ?? false,
         courses: selectedCourses,
         specializations: [status, postos],
       })
@@ -568,6 +587,51 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
             <div className="flex gap-3">
               <Button type="button" variant={form.has_cnv === true ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, has_cnv: true })}>Sim</Button>
               <Button type="button" variant={form.has_cnv === false ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, has_cnv: false })}>Não</Button>
+            </div>
+          </div>
+          <div>
+            <Label>Número da CNV</Label>
+            <Input value={form.cnv_number ?? ""} onChange={(e) => setForm({ ...form, cnv_number: e.target.value })} placeholder="Opcional" />
+          </div>
+          <div>
+            <Label>Data de nascimento</Label>
+            <Input type="date" value={form.data_nascimento ?? ""} onChange={(e) => setForm({ ...form, data_nascimento: e.target.value || null })} />
+          </div>
+          <div>
+            <Label>Estado civil</Label>
+            <select
+              value={form.estado_civil ?? ""}
+              onChange={(e) => setForm({ ...form, estado_civil: e.target.value || null })}
+              className="h-10 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Selecione</option>
+              <option value="Solteiro(a)">Solteiro(a)</option>
+              <option value="Casado(a)">Casado(a)</option>
+              <option value="Divorciado(a)">Divorciado(a)</option>
+              <option value="Viúvo(a)">Viúvo(a)</option>
+              <option value="União Estável">União Estável</option>
+            </select>
+          </div>
+          <div>
+            <Label>Altura (cm)</Label>
+            <Input value={form.altura ?? ""} onChange={(e) => setForm({ ...form, altura: e.target.value })} placeholder="Ex: 180" />
+          </div>
+          <div>
+            <Label>Peso (kg)</Label>
+            <Input value={form.peso ?? ""} onChange={(e) => setForm({ ...form, peso: e.target.value })} placeholder="Ex: 80" />
+          </div>
+          <div>
+            <Label>Possui CNH? (Habilitação)</Label>
+            <div className="flex gap-3">
+              <Button type="button" variant={form.has_cnh === true ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, has_cnh: true })}>Sim</Button>
+              <Button type="button" variant={form.has_cnh === false ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, has_cnh: false })}>Não</Button>
+            </div>
+          </div>
+          <div>
+            <Label>Disponível para viagem?</Label>
+            <div className="flex gap-3">
+              <Button type="button" variant={form.disponibilidade_viagem === true ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, disponibilidade_viagem: true })}>Sim</Button>
+              <Button type="button" variant={form.disponibilidade_viagem === false ? "default" : "outline"} className="h-10 flex-1 rounded-xl" onClick={() => setForm({ ...form, disponibilidade_viagem: false })}>Não</Button>
             </div>
           </div>
           <div>

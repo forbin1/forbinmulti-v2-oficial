@@ -533,6 +533,12 @@ export type Database = {
           courses: string[] | null
           cover_url: string | null
           created_at: string
+          altura: string | null
+          peso: string | null
+          data_nascimento: string | null
+          estado_civil: string | null
+          has_cnh: boolean
+          disponibilidade_viagem: boolean
           escolaridade: string | null
           experience_years: number | null
           full_name: string
@@ -580,6 +586,12 @@ export type Database = {
           subscription_expires_at?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
+          altura?: string | null
+          peso?: string | null
+          data_nascimento?: string | null
+          estado_civil?: string | null
+          has_cnh?: boolean
+          disponibilidade_viagem?: boolean
           updated_at?: string
           user_id: string
           website_url?: string | null
@@ -610,6 +622,12 @@ export type Database = {
           subscription_expires_at?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
+          altura?: string | null
+          peso?: string | null
+          data_nascimento?: string | null
+          estado_civil?: string | null
+          has_cnh?: boolean
+          disponibilidade_viagem?: boolean
           updated_at?: string
           user_id?: string
           website_url?: string | null
