@@ -803,9 +803,11 @@ function CourseDetailPage() {
 
 function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () => void; onPass: () => void }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [status, setStatus] = useState<"idle" | "correct" | "wrong">("idle");
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -820,20 +822,36 @@ function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () =
     })();
   }, [lesson.id]);
 
-  const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined);
+  function burstConfetti() {
+    const colors = ["#10b981", "#34d399", "#c9a84c", "#ffffff"];
+    confetti({ particleCount: 80, spread: 70, startVelocity: 45, origin: { y: 0.6 }, colors });
+  }
 
-  const submit = () => {
-    if (!allAnswered) return toast.error("Responda todas as perguntas.");
-    setSubmitting(true);
-    const correct = questions.filter((q) => answers[q.id] === q.correct_index).length;
-    setSubmitting(false);
-    if (correct === questions.length) {
-      onPass();
+  const current = questions[idx];
+
+  function choose(oi: number) {
+    if (locked || status === "correct" || !current) return;
+    setSelected(oi);
+    if (oi === current.correct_index) {
+      setStatus("correct");
+      setLocked(true);
+      burstConfetti();
+      setTimeout(() => {
+        if (idx + 1 >= questions.length) {
+          onPass();
+        } else {
+          setIdx((i) => i + 1);
+          setSelected(null);
+          setStatus("idle");
+          setLocked(false);
+        }
+      }, 1300);
     } else {
-      toast.error(`Você acertou ${correct} de ${questions.length}. Revise a aula e tente novamente.`);
-      setAnswers({});
+      setStatus("wrong");
     }
-  };
+  }
+
+  const progress = questions.length > 0 ? Math.round((idx / questions.length) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background">
@@ -852,57 +870,71 @@ function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () =
         </Button>
       </div>
 
+      {!loading && questions.length > 0 && (
+        <div className="px-4 pt-4 sm:px-6">
+          <div className="mx-auto max-w-2xl">
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted-foreground">
+              <span>Pergunta {idx + 1} de {questions.length}</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto max-w-2xl space-y-5">
-          <p className="text-sm text-muted-foreground">
-            Responda corretamente todas as perguntas para concluir a aula.
-          </p>
+        <div className="mx-auto max-w-2xl">
           {loading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : questions.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
               Esta prova ainda não tem perguntas cadastradas. Avise o administrador.
             </p>
-          ) : (
-            questions.map((q, qi) => (
-              <div key={q.id} className="rounded-2xl border border-border/60 bg-card p-5">
-                <p className="font-semibold">{qi + 1}. {q.question}</p>
-                <div className="mt-3 space-y-2">
-                  {q.options.map((opt, oi) => {
-                    const selected = answers[q.id] === oi;
-                    return (
-                      <button
-                        key={oi}
-                        type="button"
-                        onClick={() => setAnswers((a) => ({ ...a, [q.id]: oi }))}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition",
-                          selected ? "border-primary bg-primary/10 font-semibold" : "border-border bg-surface hover:border-primary/40",
-                        )}
-                      >
-                        <span className={cn(
-                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold",
-                          selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 text-muted-foreground",
-                        )}>
-                          {String.fromCharCode(65 + oi)}
-                        </span>
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
+          ) : current ? (
+            <div className="rounded-2xl border border-border/60 bg-card p-5 sm:p-7">
+              <p className="text-lg font-semibold leading-snug">{idx + 1}. {current.question}</p>
+              <div className="mt-5 space-y-2.5">
+                {current.options.map((opt, oi) => {
+                  const isSel = selected === oi;
+                  const isCorrect = status === "correct" && isSel;
+                  const isWrong = status === "wrong" && isSel;
+                  return (
+                    <button
+                      key={oi}
+                      type="button"
+                      onClick={() => choose(oi)}
+                      disabled={locked}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm transition",
+                        isCorrect && "border-emerald-500 bg-emerald-500/15 font-semibold text-emerald-600",
+                        isWrong && "border-red-500 bg-red-500/15 font-semibold text-red-600",
+                        !isCorrect && !isWrong && "border-border bg-surface hover:border-primary/40",
+                      )}
+                    >
+                      <span className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold",
+                        isCorrect && "border-emerald-500 bg-emerald-500 text-white",
+                        isWrong && "border-red-500 bg-red-500 text-white",
+                        !isCorrect && !isWrong && "border-muted-foreground/40 text-muted-foreground",
+                      )}>
+                        {isCorrect ? "✓" : isWrong ? "✕" : String.fromCharCode(65 + oi)}
+                      </span>
+                      {opt}
+                    </button>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </div>
-      </div>
 
-      <div className="border-t border-border/60 p-4">
-        <div className="mx-auto flex max-w-2xl gap-3">
-          <Button variant="outline" className="flex-1 rounded-full" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1 rounded-full" disabled={loading || submitting || questions.length === 0} onClick={submit}>
-            Enviar respostas
-          </Button>
+              {status === "correct" && (
+                <p className="mt-4 text-center text-sm font-bold text-emerald-600">Correto! Indo para a próxima… 🎉</p>
+              )}
+              {status === "wrong" && (
+                <p className="mt-4 text-center text-sm font-bold text-red-600">Resposta incorreta. Tente novamente.</p>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
