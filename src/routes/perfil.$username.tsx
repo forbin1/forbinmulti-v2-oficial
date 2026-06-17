@@ -216,7 +216,7 @@ function EmpresaPublicProfile() {
   const state = company.state || "";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 bg-background text-foreground">
+    <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-12">
       {/* Cabeçalho da empresa */}
       <ProfileHeader
         name={name}
@@ -256,34 +256,34 @@ function EmpresaPublicProfile() {
       />
 
       {/* Tabs Menu */}
-      <div className="mt-10 flex gap-2 border-b border-border/60 pb-px">
+      <div className="mt-6 flex h-auto w-full gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
         <button
           onClick={() => setActiveTab("about")}
-          className={`border-b-2 px-6 py-3 font-display text-sm font-semibold transition ${
-            activeTab === "about" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all ${
+            activeTab === "about" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Sobre
         </button>
         <button
           onClick={() => setActiveTab("jobs")}
-          className={`border-b-2 px-6 py-3 font-display text-sm font-semibold transition ${
-            activeTab === "jobs" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all ${
+            activeTab === "jobs" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Vagas ({jobs.length})
         </button>
         <button
           onClick={() => setActiveTab("posts")}
-          className={`border-b-2 px-6 py-3 font-display text-sm font-semibold transition ${
-            activeTab === "posts" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all ${
+            activeTab === "posts" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Publicações ({posts.length})
         </button>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-3">
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {activeTab === "about" && (
           <>
             <div className="lg:col-span-2 space-y-6">

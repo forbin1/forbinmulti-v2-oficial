@@ -277,9 +277,9 @@ function PerfilProfissional() {
   });
 
   return (
-    <div className="pb-16 sm:pb-0">
+    <div>
       {/* Conteúdo principal */}
-      <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-8 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-12">
 
         {/* Cabeçalho do perfil */}
         <ProfileHeader

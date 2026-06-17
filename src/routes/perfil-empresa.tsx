@@ -255,7 +255,7 @@ function PerfilEmpresa() {
   const state = company?.state || "";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-12">
       {/* Cabeçalho da empresa */}
       <ProfileHeader
         name={name}
@@ -293,11 +293,11 @@ function PerfilEmpresa() {
       />
 
       {/* Tabs */}
-      <Tabs defaultValue="sobre" className="mt-8">
-        <TabsList className="w-full justify-start rounded-full bg-accent/40 p-1 max-w-md">
-          <TabsTrigger value="sobre" className="flex-1 rounded-full py-2.5">Sobre</TabsTrigger>
-          <TabsTrigger value="vagas" className="flex-1 rounded-full py-2.5">Vagas ({jobs.length})</TabsTrigger>
-          <TabsTrigger value="posts" className="flex-1 rounded-full py-2.5">Publicações ({posts.length})</TabsTrigger>
+      <Tabs defaultValue="sobre" className="mt-6">
+        <TabsList className="flex h-auto w-full gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
+          <TabsTrigger value="sobre" className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Sobre</TabsTrigger>
+          <TabsTrigger value="vagas" className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Vagas ({jobs.length})</TabsTrigger>
+          <TabsTrigger value="posts" className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Publicações ({posts.length})</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Sobre */}
