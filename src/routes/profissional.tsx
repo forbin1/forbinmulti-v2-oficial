@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { PROFILES } from "@/data/profiles";
 import { useEffect, useState, useRef } from "react";
 import {
   MapPin, Phone, Mail, ShieldCheck, Briefcase, Heart, MessageCircle, MoreHorizontal,
@@ -883,29 +882,25 @@ export function PostCard({ post, owned = false, authorTier }: { post: any; owned
   const [liked, setLiked] = useState(false);
 
   const handleAuthorClick = async () => {
+    if (!post.user_id) return;
     try {
-      const isCompany = post.author_role === "Empresa" || !post.profiles;
-      
-      if (isCompany) {
-        const { data: comp } = await supabase
-          .from("companies")
-          .select("username")
-          .eq("user_id", post.user_id)
-          .maybeSingle();
-          
-        if (comp?.username) {
-          navigate({ to: `/perfil/${comp.username}` as any });
+      // Define o tipo do autor pela existência de um registro em companies.
+      const { data: comp } = await supabase
+        .from("companies")
+        .select("username")
+        .eq("user_id", post.user_id)
+        .maybeSingle();
+
+      if (comp) {
+        // Empresa → perfil individual da empresa.
+        if (comp.username) {
+          navigate({ to: "/perfil/$username", params: { username: comp.username } });
         } else {
-          const fallbackSlug = post.author_name.toLowerCase().replace(/[^a-z0-9]/g, "-");
-          navigate({ to: `/perfil/${fallbackSlug}` as any });
+          toast.info("Este perfil de empresa ainda não está disponível publicamente.");
         }
       } else {
-        const mockProfile = PROFILES.find(p => p.id === post.user_id || p.name.toLowerCase() === post.author_name.toLowerCase());
-        if (mockProfile) {
-          navigate({ to: `/u/${mockProfile.handle}` as any });
-        } else {
-          navigate({ to: `/u/${post.user_id}` as any });
-        }
+        // Profissional → perfil individual do profissional.
+        navigate({ to: "/u/$handle", params: { handle: post.user_id } });
       }
     } catch (err) {
       console.error("Error navigating to author profile:", err);
