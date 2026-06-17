@@ -39,6 +39,18 @@ export const Route = createFileRoute("/u/$handle")({
 const COVER_KEY = (h: string) => `forbin:cover:${h}`;
 const AVATAR_KEY = (h: string) => `forbin:avatar:${h}`;
 
+/** Gera um @ amigável a partir do nome quando não há username escolhido. */
+function slugifyHandle(name?: string | null): string {
+  if (!name) return "";
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+    .slice(0, 24);
+}
+
 function PerfilUsuario() {
   const { handle } = Route.useParams();
   const navigate = useNavigate();
@@ -65,23 +77,27 @@ function PerfilUsuario() {
       setLoading(true);
       (async () => {
         try {
-          let query = supabase.from("profiles").select("*");
           const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handle);
-          
+
+          let data: any = null;
           if (isUuid) {
-            query = query.eq("user_id", handle);
+            ({ data } = await supabase.from("profiles").select("*").eq("user_id", handle).maybeSingle());
           } else {
-            query = query.ilike("full_name", `%${handle}%`);
+            // tenta pelo @username escolhido, depois pelo nome
+            ({ data } = await supabase.from("profiles").select("*").eq("username", handle).maybeSingle());
+            if (!data) {
+              ({ data } = await supabase.from("profiles").select("*").ilike("full_name", `%${handle}%`).maybeSingle());
+            }
           }
-          
-          const { data, error } = await query.maybeSingle();
           if (data) {
             const initials = data.full_name.split(" ").map((n: any) => n[0]).join("").slice(0, 2).toUpperCase();
+            const sysRole = ["professional", "company", "admin"].includes(data.role);
             setProfile({
               id: data.user_id,
               handle: handle,
+              username: data.username || null,
               name: data.full_name,
-              role: data.role || "Profissional de Segurança",
+              role: data.role && !sysRole ? data.role : "Profissional de Segurança",
               kind: "professional",
               initials,
               location: data.city ? `${data.city}, ${data.state}` : undefined,
@@ -257,14 +273,13 @@ function PerfilUsuario() {
                 {profile.kind === "company" ? (
                   <Badge className="rounded-full border-primary/40 bg-primary/15 text-primary"><Building2 className="mr-1 h-3.5 w-3.5" /> Empresa</Badge>
                 ) : (
-                  <span className="inline-flex flex-wrap items-center gap-2">
-                    <Badge className="rounded-full border-success/40 bg-success/15 text-success"><ShieldCheck className="mr-1 h-3.5 w-3.5" /> Verificado</Badge>
-                    {level.tier !== "none" && <LevelBadge tier={level.tier} size="md" />}
-                  </span>
+                  level.tier !== "none" && <LevelBadge tier={level.tier} size="lg" />
                 )}
               </div>
               <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">{profile.name}</h1>
-              <p className="mt-1 text-sm font-medium text-primary">@{profile.handle}</p>
+              {(profile.username || profile.handle) && (
+                <p className="mt-1 text-sm font-medium text-primary">@{profile.username || slugifyHandle(profile.name) || profile.handle}</p>
+              )}
               <p className="mt-1 text-muted-foreground">{profile.role}</p>
               {profile.location && (
                 <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">

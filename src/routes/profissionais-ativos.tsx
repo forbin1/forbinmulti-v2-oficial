@@ -235,7 +235,7 @@ function ProfissionaisAtivos() {
                       <h3 className="truncate font-semibold leading-tight group-hover:text-primary transition-colors">{p.full_name}</h3>
                       {level.tier !== "none" && <LevelBadge tier={level.tier} size="sm" showLabel={false} />}
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">{p.role || "Profissional de Segurança"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{p.role && !["professional", "company", "admin"].includes(p.role) ? p.role : "Profissional de Segurança"}</p>
                     <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                       status === "Disponível para propostas"
                         ? "bg-success/10 text-success"

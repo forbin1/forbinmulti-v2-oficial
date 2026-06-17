@@ -74,7 +74,16 @@ type Profile = {
   has_cnh: boolean | null;
   served_military: boolean | null;
   disponibilidade_viagem: boolean | null;
+  username: string | null;
 };
+
+/** Mostra o cargo em PT; ignora o papel de sistema ("professional"/"company"). */
+function displayRole(role: string | null | undefined): string {
+  if (!role || role === "professional" || role === "company" || role === "admin") {
+    return "Profissional de Segurança";
+  }
+  return role;
+}
 
 function PerfilProfissional() {
   const { user } = useAuth();
@@ -295,10 +304,9 @@ function PerfilProfissional() {
           name={profile.full_name}
           initials={initials}
           eyebrow="Profissional"
-          subtitle={`${profile.role || "Profissional de Segurança"}${profile.experience_years ? ` · ${profile.experience_years} anos de exp.` : ""}`}
+          subtitle={`${displayRole(profile.role)}${profile.experience_years ? ` · ${profile.experience_years} anos de exp.` : ""}`}
           avatarUrl={profile.avatar_url}
           coverUrl={profile.cover_url}
-          verified={profile.is_verified}
           levelTier={level.tier}
           whatsapp={profile.whatsapp}
           isOwner
@@ -505,6 +513,7 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
       .from("profiles")
       .update({
         full_name: form.full_name,
+        username: form.username ? form.username.toLowerCase().replace(/[^a-z0-9._]/g, "") || null : null,
         role: form.role,
         experience_years: form.experience_years,
         city: form.city,
@@ -544,6 +553,18 @@ function EditProfileDialog({ open, profile, onClose, onSaved }: { open: boolean;
           <div className="sm:col-span-2">
             <Label>Nome Completo</Label>
             <Input value={form.full_name ?? ""} onChange={(e) => setForm({...form, full_name: e.target.value})} />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Nome de usuário (@)</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">@</span>
+              <Input
+                value={form.username ?? ""}
+                onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, "") })}
+                placeholder="seu_usuario"
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Aparece como @{form.username || "seu_usuario"} no seu perfil. Use letras minúsculas, números, ponto e _.</p>
           </div>
           <div>
             <Label>Cargo / Especialidade (Função)</Label>

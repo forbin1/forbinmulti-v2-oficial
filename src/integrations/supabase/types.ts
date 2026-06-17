@@ -591,6 +591,7 @@ export type Database = {
           subscription_status: string | null
           updated_at: string
           user_id: string
+          username: string | null
           website_url: string | null
           whatsapp: string | null
         }
@@ -627,6 +628,7 @@ export type Database = {
           disponibilidade_viagem?: boolean
           updated_at?: string
           user_id: string
+          username?: string | null
           website_url?: string | null
           whatsapp?: string | null
         }
@@ -663,6 +665,7 @@ export type Database = {
           disponibilidade_viagem?: boolean
           updated_at?: string
           user_id?: string
+          username?: string | null
           website_url?: string | null
           whatsapp?: string | null
         }
