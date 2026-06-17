@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { ProfileHeader } from "@/components/ProfileHeader";
+import { LockedInfo } from "@/components/LockedInfo";
+import { useSubscription } from "@/hooks/use-subscription";
 
 export const Route = createFileRoute("/perfil/$username")({
   head: ({ params }) => ({
@@ -28,6 +30,7 @@ export const Route = createFileRoute("/perfil/$username")({
 function EmpresaPublicProfile() {
   const { username } = Route.useParams();
   const { user } = useAuth();
+  const { isActive } = useSubscription();
   const [company, setCompany] = useState<any>(null);
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -58,6 +61,9 @@ function EmpresaPublicProfile() {
   }, [username]);
 
   const isOwner = !!user && !!company && user.id === company.user_id;
+  const isAdmin = user?.email === "admin@gmail.com";
+  // Só vê dados/contato da empresa quem é o dono, admin, ou tem plano ativo (mensal/anual).
+  const canView = isOwner || isAdmin || isActive;
 
   useEffect(() => {
     if (!company?.id) return;
@@ -228,14 +234,15 @@ function EmpresaPublicProfile() {
         verifiedLabel="Verificada FORBIN"
         whatsapp={phone !== "Não cadastrado" ? phone : null}
         isOwner={isOwner}
+        contactLocked={!canView}
         uploading={uploading}
         onPickAvatar={(f) => handlePick(f, "avatar")}
         onPickCover={(f) => handlePick(f, "cover")}
         meta={[
           { icon: MapPin, text: `${city}${state ? `, ${state}` : ""}` },
-          { icon: Building2, text: `CNPJ ${cnpj}` },
-          ...(website !== "Não cadastrado" ? [{ icon: Globe, text: website }] : []),
-          ...(phone !== "Não cadastrado" ? [{ icon: Phone, text: phone }] : []),
+          ...(canView ? [{ icon: Building2, text: `CNPJ ${cnpj}` }] : []),
+          ...(canView && website !== "Não cadastrado" ? [{ icon: Globe, text: website }] : []),
+          ...(canView && phone !== "Não cadastrado" ? [{ icon: Phone, text: phone }] : []),
         ]}
         stats={[
           { label: "Vagas", value: String(jobs.length) },
@@ -298,26 +305,38 @@ function EmpresaPublicProfile() {
             <aside className="space-y-6">
               <div className="rounded-3xl border border-border/60 bg-card p-6">
                 <h3 className="font-display text-lg font-bold mb-4">Informações corporativas</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Tamanho</p>
-                    <p className="text-sm font-medium mt-0.5">{company.employee_count ? `${company.employee_count} colaboradores` : "Não especificado"}</p>
+                {canView ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tamanho</p>
+                      <p className="text-sm font-medium mt-0.5">{company.employee_count ? `${company.employee_count} colaboradores` : "Não especificado"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">CNPJ</p>
+                      <p className="text-sm font-medium mt-0.5">{cnpj}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Localização</p>
+                      <p className="text-sm font-medium mt-0.5">{city}{state ? `, ${state}` : ""}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Telefone</p>
+                      <p className="text-sm font-medium mt-0.5">{phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Canais</p>
+                      <p className="text-sm font-medium mt-0.5">
+                        {website !== "Não cadastrado" ? (
+                          <a href={website.startsWith("http") ? website : `https://${website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            {website}
+                          </a>
+                        ) : "Nenhum link configurado"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Localização</p>
-                    <p className="text-sm font-medium mt-0.5">{city}{state ? `, ${state}` : ""}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Canais</p>
-                    <p className="text-sm font-medium mt-0.5">
-                      {website !== "Não cadastrado" ? (
-                        <a href={website.startsWith("http") ? website : `https://${website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {website}
-                        </a>
-                      ) : "Nenhum link configurado"}
-                    </p>
-                  </div>
-                </div>
+                ) : (
+                  <LockedInfo message="Ative um plano (mensal ou anual) para ver os dados e o contato desta empresa." />
+                )}
               </div>
             </aside>
           </>

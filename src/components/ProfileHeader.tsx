@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { Camera, Loader2, type LucideIcon } from "lucide-react";
+import { Camera, Loader2, Lock, type LucideIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { LevelBadge } from "@/components/LevelBadge";
@@ -29,6 +30,8 @@ type Props = {
   onPickCover?: (file: File) => void;
   /** Botões extras (editar, compartilhar, painel...). */
   actions?: React.ReactNode;
+  /** Quando true, o contato (WhatsApp) fica bloqueado (sem plano ativo). */
+  contactLocked?: boolean;
 };
 
 export function ProfileHeader({
@@ -49,6 +52,7 @@ export function ProfileHeader({
   onPickAvatar,
   onPickCover,
   actions,
+  contactLocked = false,
 }: Props) {
   const avatarInput = useRef<HTMLInputElement>(null);
   const coverInput = useRef<HTMLInputElement>(null);
@@ -56,7 +60,16 @@ export function ProfileHeader({
   const waDigits = whatsapp?.replace(/\D/g, "") || "";
   const waHref = waDigits ? `https://wa.me/${waDigits.length > 11 ? waDigits : `55${waDigits}`}` : null;
 
-  const whatsappBtn = waHref ? (
+  const whatsappBtn = contactLocked ? (
+    <Button
+      asChild
+      className="h-11 rounded-full bg-muted px-5 font-bold text-muted-foreground hover:bg-muted/80"
+    >
+      <Link to="/minha-assinatura">
+        <Lock className="mr-2 h-4 w-4" /> Assine para ver contato
+      </Link>
+    </Button>
+  ) : waHref ? (
     <Button
       asChild
       className="h-11 rounded-full bg-[#25D366] px-5 font-bold text-white shadow-md shadow-[#25D366]/20 hover:bg-[#1fb858]"

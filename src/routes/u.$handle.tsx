@@ -22,6 +22,9 @@ import { computeLevel } from "@/lib/professional-level";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ExperienceList, toMonthInput, type ExperienceDraft } from "@/components/ProfessionalExperiences";
 import { ProfessionalInfo } from "@/components/ProfessionalInfo";
+import { LockedInfo } from "@/components/LockedInfo";
+import { useSubscription } from "@/hooks/use-subscription";
+import { Lock } from "lucide-react";
 
 export const Route = createFileRoute("/u/$handle")({
   head: ({ params }) => ({
@@ -41,6 +44,7 @@ function PerfilUsuario() {
   const navigate = useNavigate();
   const { isFavorite, toggle } = useFavorites();
   const { user } = useAuth();
+  const { isActive } = useSubscription();
 
   const [profile, setProfile] = useState<any>(null);
   const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
@@ -157,6 +161,9 @@ function PerfilUsuario() {
 
   // No mock ou banco, consideramos "dono" se o user logado for o mesmo do id/handle.
   const isOwner = !!user && (user.id === profile.id || user.user_metadata?.handle === profile.handle || user.email?.split("@")[0] === profile.handle);
+  const isAdmin = user?.email === "admin@gmail.com";
+  // Só vê informações e contato quem é o dono, admin, ou tem plano ativo (mensal/anual).
+  const canView = isOwner || isAdmin || isActive;
 
   const fav = isFavorite(profile.id, profile.kind);
 
@@ -268,11 +275,17 @@ function PerfilUsuario() {
 
             <div className="flex flex-wrap gap-3">
               {profile.whatsapp && (
-                <Button asChild className="h-12 rounded-full bg-[#25D366] px-6 font-semibold text-white hover:bg-[#1ebe5a]">
-                  <a href={`https://wa.me/${profile.whatsapp}`} target="_blank" rel="noreferrer">
-                    <WhatsAppIcon className="mr-2 h-5 w-5 text-white" /> WhatsApp
-                  </a>
-                </Button>
+                canView ? (
+                  <Button asChild className="h-12 rounded-full bg-[#25D366] px-6 font-semibold text-white hover:bg-[#1ebe5a]">
+                    <a href={`https://wa.me/${profile.whatsapp}`} target="_blank" rel="noreferrer">
+                      <WhatsAppIcon className="mr-2 h-5 w-5 text-white" /> WhatsApp
+                    </a>
+                  </Button>
+                ) : (
+                  <Button asChild className="h-12 rounded-full bg-muted px-6 font-semibold text-muted-foreground hover:bg-muted/80">
+                    <Link to="/minha-assinatura"><Lock className="mr-2 h-5 w-5" /> Assine para ver contato</Link>
+                  </Button>
+                )
               )}
               <Button
                 variant="outline"
@@ -302,28 +315,32 @@ function PerfilUsuario() {
         {profile.kind === "professional" && (
           <div className="mt-6">
             <Card title="Informações do Profissional">
-              <ProfessionalInfo
-                profile={{
-                  full_name: profile.name,
-                  city: profile.city,
-                  state: profile.state,
-                  role: profile.role,
-                  experience_years: profile.experience_years,
-                  escolaridade: profile.escolaridade,
-                  estado_civil: profile.estado_civil,
-                  altura: profile.altura,
-                  peso: profile.peso,
-                  data_nascimento: profile.data_nascimento,
-                  has_cnv: profile.has_cnv,
-                  cnv_number: profile.cnv_number,
-                  has_cnh: profile.has_cnh,
-                  served_military: profile.served_military,
-                  disponibilidade_viagem: profile.disponibilidade_viagem,
-                  phone: profile.phone,
-                  whatsapp: profile.whatsapp,
-                  specializations: profile.specializations,
-                }}
-              />
+              {canView ? (
+                <ProfessionalInfo
+                  profile={{
+                    full_name: profile.name,
+                    city: profile.city,
+                    state: profile.state,
+                    role: profile.role,
+                    experience_years: profile.experience_years,
+                    escolaridade: profile.escolaridade,
+                    estado_civil: profile.estado_civil,
+                    altura: profile.altura,
+                    peso: profile.peso,
+                    data_nascimento: profile.data_nascimento,
+                    has_cnv: profile.has_cnv,
+                    cnv_number: profile.cnv_number,
+                    has_cnh: profile.has_cnh,
+                    served_military: profile.served_military,
+                    disponibilidade_viagem: profile.disponibilidade_viagem,
+                    phone: profile.phone,
+                    whatsapp: profile.whatsapp,
+                    specializations: profile.specializations,
+                  }}
+                />
+              ) : (
+                <LockedInfo message="Ative um plano (mensal ou anual) para ver os dados completos e o contato deste profissional." />
+              )}
             </Card>
           </div>
         )}

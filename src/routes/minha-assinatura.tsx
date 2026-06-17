@@ -280,7 +280,7 @@ function MinhaAssinaturaPage() {
           <ul className="divide-y divide-border/40">
             {[
               { label: "Ver todos os planos", to: "/planos" },
-              { label: role === "company" ? "Painel da empresa" : "Meu perfil", to: role === "company" ? "/empresa" : "/perfil" },
+              { label: role === "company" ? "Painel da empresa" : "Meu perfil", to: role === "company" ? "/empresa" : "/profissional" },
               { label: "Vagas disponíveis", to: "/vagas" },
               { label: "Cursos", to: "/cursos" },
             ].map(({ label, to }) => (
