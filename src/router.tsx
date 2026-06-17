@@ -4,6 +4,12 @@ import { routeTree } from "./routeTree.gen";
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
+  // Loga o erro real no console do navegador para diagnóstico.
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.error("[Route error]", error);
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -23,13 +29,14 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Something went wrong</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          An unexpected error occurred. Please try again.
+          Ocorreu um erro inesperado. Tente novamente.
         </p>
-        {import.meta.env.DEV && error.message && (
-          <pre className="mt-4 max-h-40 overflow-auto rounded-md bg-muted p-3 text-left font-mono text-xs text-destructive">
+        {error?.message && (
+          <pre className="mt-4 max-h-48 overflow-auto rounded-md bg-muted p-3 text-left font-mono text-xs text-destructive">
             {error.message}
+            {error.stack ? "\n\n" + error.stack.split("\n").slice(0, 4).join("\n") : ""}
           </pre>
         )}
         <div className="mt-6 flex items-center justify-center gap-3">
