@@ -51,14 +51,27 @@ function MinhaAssinaturaPage() {
 
   const openRenew = () => {
     const isCompany = role === "company";
+    // Mantém o período do plano atual (mensal/anual); padrão anual se não houver plano.
+    const isAnnual = plan ? plan.includes("anual") || plan.includes("year") : true;
+    const audience = isCompany ? "company" : "professional";
+
+    const labels = {
+      "company-year": { name: "Empresa Anual", installment: "R$250,00 12x", pix: "R$3.000,00 à vista" },
+      "company-month": { name: "Empresa Mensal", installment: "R$250,00/mês", pix: "R$250,00 à vista" },
+      "professional-year": { name: "Profissional Anual", installment: "R$27,90 12x", pix: "R$247,90 à vista" },
+      "professional-month": { name: "Profissional Mensal", installment: "R$27,90/mês", pix: "R$27,90 à vista" },
+    } as const;
+    const key = `${audience}-${isAnnual ? "year" : "month"}` as keyof typeof labels;
+    const L = labels[key];
+
     setCheckoutPlan({
-      name: isCompany ? "Empresa Anual" : "Profissional Anual",
-      installmentLabel: isCompany ? "R$250,00 12x" : "R$27,90 12x",
-      pixLabel: isCompany ? "R$3.000,00 à vista" : "R$247,90 à vista",
-      period: "Anual",
-      audience: isCompany ? "company" : "professional",
-      periodRaw: "year",
-      slug: isCompany ? "empresa-anual" : "profissional-anual",
+      name: L.name,
+      installmentLabel: L.installment,
+      pixLabel: L.pix,
+      period: isAnnual ? "Anual" : "Mensal",
+      audience,
+      periodRaw: isAnnual ? "year" : "month",
+      slug: `${isCompany ? "empresa" : "profissional"}-${isAnnual ? "anual" : "mensal"}`,
     });
     setCheckoutOpen(true);
   };

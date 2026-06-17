@@ -112,7 +112,7 @@ export function CheckoutModal({ open, onOpenChange, plan, onSuccess }: Props) {
     cardExpiry.length === 5 &&
     cardCvv.length >= 3;
 
-  const dashboardPath = role === "professional" ? "/perfil" : "/empresa";
+  const dashboardPath = role === "professional" ? "/profissional" : "/empresa";
   const isCourse = plan.slug.startsWith("course-");
 
   return (

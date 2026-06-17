@@ -84,7 +84,22 @@ export async function activateSubscription(
   period: "month" | "year",
   planSlug: string,
 ) {
-  const expiresAt = new Date();
+  // Renovação: se já houver um plano ativo no futuro, estende a partir da expiração
+  // atual (não perde os dias restantes); caso contrário, a partir de agora.
+  const { data: current } = await supabase
+    .from("profiles")
+    .select("subscription_status, subscription_expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const now = new Date();
+  let base = now;
+  if (current?.subscription_status === "active" && current?.subscription_expires_at) {
+    const currentExp = new Date(current.subscription_expires_at);
+    if (currentExp > now) base = currentExp;
+  }
+
+  const expiresAt = new Date(base);
   if (period === "year") expiresAt.setFullYear(expiresAt.getFullYear() + 1);
   else expiresAt.setMonth(expiresAt.getMonth() + 1);
 
