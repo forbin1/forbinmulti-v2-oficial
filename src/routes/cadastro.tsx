@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, User, MapPin, GraduationCap, Camera, Loader2, Mail, Lock, Building2, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,36 @@ function CadastroProfissional() {
   const [peso, setPeso] = useState("");
   const [hasCnh, setHasCnh] = useState(false);
   const [disponibilidadeViagem, setDisponibilidadeViagem] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!userId) {
+      toast.error("Crie sua conta primeiro (etapa 1).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx. 5MB).");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `profiles/${userId}/avatar-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("certificates")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("certificates").getPublicUrl(path);
+      setAvatarUrl(data.publicUrl);
+      toast.success("Foto enviada!");
+    } catch (err: any) {
+      toast.error("Erro ao enviar foto: " + err.message);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
   const [experiences, setExperiences] = useState<ExperienceDraft[]>([]);
   const [expDialogOpen, setExpDialogOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<ExperienceDraft | null>(null);
@@ -137,6 +167,7 @@ function CadastroProfissional() {
             peso: peso || null,
             has_cnh: hasCnh,
             disponibilidade_viagem: disponibilidadeViagem,
+            avatar_url: avatarUrl || null,
           } as any)
           .eq("user_id", userId);
 
@@ -436,13 +467,33 @@ function CadastroProfissional() {
           <div className="space-y-6">
             <h2 className="font-display text-2xl font-bold">Foto de Corpo Inteiro (Perfil Profissional)</h2>
             <p className="text-muted-foreground">Envie uma foto de corpo inteiro, de preferência uniformizado. Essa será sua apresentação profissional para as empresas.</p>
-            <div className="rounded-3xl border-2 border-dashed border-border bg-surface p-12 text-center">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 text-primary">
-                <Upload className="h-8 w-8" />
-              </div>
-              <p className="mt-4 text-lg font-semibold">Arraste sua foto de corpo inteiro ou clique para enviar</p>
-              <p className="mt-1 text-sm text-muted-foreground">JPG ou PNG, máximo 5MB</p>
-              <Button className="mt-6 rounded-full">Selecionar foto</Button>
+            <div className="rounded-3xl border-2 border-dashed border-border bg-surface p-8 text-center sm:p-12">
+              {avatarUrl ? (
+                <div className="flex flex-col items-center gap-4">
+                  <img src={avatarUrl} alt="Sua foto" className="h-44 w-44 rounded-2xl border border-border object-cover" />
+                  <Button variant="outline" className="rounded-full" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}>
+                    {uploadingAvatar ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Trocar foto
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 text-primary">
+                    <Upload className="h-8 w-8" />
+                  </div>
+                  <p className="mt-4 text-lg font-semibold">Arraste sua foto de corpo inteiro ou clique para enviar</p>
+                  <p className="mt-1 text-sm text-muted-foreground">JPG ou PNG, máximo 5MB</p>
+                  <Button className="mt-6 rounded-full" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}>
+                    {uploadingAvatar ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</> : "Selecionar foto"}
+                  </Button>
+                </>
+              )}
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])}
+              />
             </div>
 
             <div className="rounded-2xl border border-primary/40 bg-primary/5 p-5">
