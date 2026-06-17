@@ -1,5 +1,5 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   MapPin,
@@ -19,44 +19,48 @@ import { useAuth } from "@/hooks/use-auth";
 import { ProfileHeader } from "@/components/ProfileHeader";
 
 export const Route = createFileRoute("/perfil/$username")({
-  loader: async ({ params }) => {
-    const { data: company, error } = await supabase
-      .from("companies")
-      .select("*")
-      .eq("username", params.username)
-      .maybeSingle();
-
-    if (error || !company) {
-      throw notFound();
-    }
-    return { company };
-  },
-  head: ({ loaderData }) => ({
-    meta: loaderData
-      ? [
-          { title: `${loaderData.company.company_name} — FORBIN` },
-          { name: "description", content: loaderData.company.description || "" },
-        ]
-      : [],
+  head: ({ params }) => ({
+    meta: [{ title: `${params.username} — FORBIN` }],
   }),
   component: EmpresaPublicProfile,
 });
 
 function EmpresaPublicProfile() {
-  const { company: initialCompany } = Route.useLoaderData();
-  const { user, role } = useAuth();
-  const [company, setCompany] = useState(initialCompany);
+  const { username } = Route.useParams();
+  const { user } = useAuth();
+  const [company, setCompany] = useState<any>(null);
+  const [loadingCompany, setLoadingCompany] = useState(true);
   const [jobs, setJobs] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([
+  const [posts] = useState<any[]>([
     { id: 1, content: "Estamos expandindo nossas operações em segurança premium! Novas vagas disponíveis em breve.", date: "Hoje" },
     { id: 2, content: "Valorizamos o treinamento constante da nossa equipe de vigilância patrimonial.", date: "Ontem" }
   ]);
   const [activeTab, setActiveTab] = useState<"about" | "jobs" | "posts">("about");
   const [loadingJobs, setLoadingJobs] = useState(true);
 
-  const isOwner = user?.id === company.user_id;
+  // Busca a empresa pelo username no client (com a sessão do usuário). Evita o erro de
+  // RLS no SSR — a tabela companies só libera SELECT para usuários autenticados.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoadingCompany(true);
+      const { data } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("username", username)
+        .maybeSingle();
+      if (active) {
+        setCompany(data ?? null);
+        setLoadingCompany(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [username]);
+
+  const isOwner = !!user && !!company && user.id === company.user_id;
 
   useEffect(() => {
+    if (!company?.id) return;
     (async () => {
       try {
         setLoadingJobs(true);
@@ -76,10 +80,11 @@ function EmpresaPublicProfile() {
         setLoadingJobs(false);
       }
     })();
-  }, [company.id]);
+  }, [company?.id]);
 
   // Realtime subscription if this is the owner
   useEffect(() => {
+    if (!company?.id) return;
     const channel = supabase
       .channel(`company-public-${company.id}`)
       .on(
@@ -99,7 +104,7 @@ function EmpresaPublicProfile() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [company.id]);
+  }, [company?.id]);
 
   const handleShare = () => {
     const profileUrl = window.location.href;
@@ -183,6 +188,24 @@ function EmpresaPublicProfile() {
       toast.error("Erro ao atualizar imagem: " + err.message);
     }
   };
+
+  if (loadingCompany) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
+        <h1 className="font-display text-2xl font-bold">Empresa não encontrada</h1>
+        <p className="mt-2 text-muted-foreground">A empresa @{username} não existe ou não foi encontrada.</p>
+        <Button asChild className="mt-6 rounded-full"><Link to="/feed">Voltar</Link></Button>
+      </div>
+    );
+  }
 
   const name = company.company_name || "Empresa";
   const avatar = company.logo_url;

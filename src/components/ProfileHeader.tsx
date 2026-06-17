@@ -1,8 +1,9 @@
 import { useRef } from "react";
-import { Camera, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Camera, Loader2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { LevelBadge } from "@/components/LevelBadge";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import type { LevelTier } from "@/lib/professional-level";
 import { cn } from "@/lib/utils";
 
@@ -140,12 +141,8 @@ export function ProfileHeader({
             )}
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 sm:justify-start">
               <h1 className="font-display text-xl font-black tracking-tight sm:text-3xl">{name}</h1>
-              {verified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2.5 py-1 text-[11px] font-bold text-sky-400 ring-1 ring-inset ring-sky-500/30">
-                  <ShieldCheck className="h-3.5 w-3.5" /> {verifiedLabel}
-                </span>
-              )}
-              {levelTier && levelTier !== "none" && <LevelBadge tier={levelTier} size="md" />}
+              {verified && <VerifiedBadge size="md" label={verifiedLabel} />}
+              {levelTier && levelTier !== "none" && <LevelBadge tier={levelTier} size="md" showLabel={false} />}
             </div>
             {subtitle && <p className="mt-1 text-sm font-medium text-muted-foreground sm:text-base">{subtitle}</p>}
           </div>

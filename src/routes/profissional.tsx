@@ -29,7 +29,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { FeatureGate } from "@/components/SubscriptionGuard";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { computeLevel, LEVEL_META, ESCOLARIDADE_OPTIONS } from "@/lib/professional-level";
+import { computeLevel, LEVEL_META, ESCOLARIDADE_OPTIONS, type LevelTier } from "@/lib/professional-level";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import {
@@ -872,7 +872,7 @@ export function ComposeBox() {
   );
 }
 
-export function PostCard({ post, owned = false }: { post: any; owned?: boolean }) {
+export function PostCard({ post, owned = false, authorTier }: { post: any; owned?: boolean; authorTier?: LevelTier }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [content, setContent] = useState(post.content);
@@ -985,7 +985,10 @@ export function PostCard({ post, owned = false }: { post: any; owned?: boolean }
           onClick={handleAuthorClick}
           className="min-w-0 flex-1 cursor-pointer group"
         >
-          <p className="font-semibold group-hover:text-primary transition-colors">{authorName}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="truncate font-semibold group-hover:text-primary transition-colors">{authorName}</p>
+            {authorTier && authorTier !== "none" && <LevelBadge tier={authorTier} size="sm" showLabel={false} />}
+          </div>
           <p className="truncate text-xs text-muted-foreground">
             {authorRole} · {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : "Agora"}
           </p>

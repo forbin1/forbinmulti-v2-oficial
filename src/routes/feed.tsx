@@ -9,6 +9,7 @@ import { Fragment, useState, useEffect } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { computeLevel, type LevelTier, type LevelExperienceInput } from "@/lib/professional-level";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
@@ -161,6 +162,31 @@ function FeedContent() {
 function FeedList() {
   const { posts, loading, newPostsCount, refresh } = usePosts();
   const { user } = useAuth();
+  const [levels, setLevels] = useState<Record<string, LevelTier>>({});
+
+  useEffect(() => {
+    const ids = [...new Set(posts.map((p) => p.user_id).filter(Boolean))];
+    if (ids.length === 0) return;
+    (async () => {
+      const [{ data: profs }, { data: exps }] = await Promise.all([
+        supabase.from("profiles").select("user_id, courses, experience_years").in("user_id", ids),
+        supabase.from("professional_experiences").select("user_id, category, position").in("user_id", ids),
+      ]);
+      const expByUser: Record<string, LevelExperienceInput[]> = {};
+      exps?.forEach((e: any) => {
+        (expByUser[e.user_id] ??= []).push({ category: e.category, position: e.position });
+      });
+      const map: Record<string, LevelTier> = {};
+      profs?.forEach((pr: any) => {
+        map[pr.user_id] = computeLevel({
+          courses: pr.courses,
+          experienceYears: pr.experience_years,
+          experiences: expByUser[pr.user_id] || [],
+        }).tier;
+      });
+      setLevels(map);
+    })();
+  }, [posts]);
 
   return (
     <div className="space-y-6">
@@ -192,7 +218,7 @@ function FeedList() {
       ) : (
         posts.map((p, idx) => (
           <Fragment key={p.id}>
-            <PostCard post={p} owned={user?.id === p.user_id} />
+            <PostCard post={p} owned={user?.id === p.user_id} authorTier={levels[p.user_id]} />
             {(idx + 1) % 2 === 0 && (
               <AdBanner ad={ADS[Math.floor(idx / 2) % ADS.length]} />
             )}
