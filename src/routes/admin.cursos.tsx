@@ -49,6 +49,29 @@ const toggleCoursePublishedServer = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+const CONTENT_TYPES: Record<string, string> = {
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+  webp: "image/webp", gif: "image/gif", pdf: "application/pdf",
+};
+
+/** Upload de imagem/material via service role (bypassa RLS do storage). */
+const uploadCourseImageServer = createServerFn({ method: "POST" })
+  .handler(async ({ data }) => {
+    const { base64, ext, folder } = data as { base64: string; ext: string; folder: string };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const raw = base64.includes(",") ? base64.split(",").pop()! : base64;
+    const buffer = Buffer.from(raw, "base64");
+    const safeExt = (ext || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const rand = Math.random().toString(36).substring(2, 14);
+    const path = `${folder}/${rand}.${safeExt}`;
+    const { error } = await supabaseAdmin.storage
+      .from("certificates")
+      .upload(path, buffer, { contentType: CONTENT_TYPES[safeExt] || "application/octet-stream", upsert: false });
+    if (error) throw new Error(error.message);
+    const { data: pub } = supabaseAdmin.storage.from("certificates").getPublicUrl(path);
+    return { url: pub.publicUrl };
+  });
+
 const saveBannerServer = createServerFn({ method: "POST" })
   .handler(async ({ data: payload }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -71,6 +94,7 @@ export const Route = createFileRoute("/admin/cursos")({
       deleteCourse={deleteCourseServer}
       toggleCoursePublished={toggleCoursePublishedServer}
       saveBanner={saveBannerServer}
+      uploadImage={uploadCourseImageServer}
     />
   ),
 });

@@ -33,6 +33,32 @@ import {
 import { toast } from "sonner";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
+type UploadFn = (args: { data: { base64: string; ext: string; folder: string } }) => Promise<{ url: string }>;
+
+function readFileBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(new Error("Falha ao ler o arquivo"));
+    r.readAsDataURL(file);
+  });
+}
+
+/** Sobe a imagem via server function (service role, bypassa RLS); usa o client como fallback. */
+async function uploadToStorage(file: File, folder: string, uploadImage?: UploadFn): Promise<string> {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  if (uploadImage) {
+    const base64 = await readFileBase64(file);
+    const { url } = await uploadImage({ data: { base64, ext, folder } });
+    return url;
+  }
+  const rand = Math.random().toString(36).substring(2, 15);
+  const path = `${folder}/${rand}.${ext}`;
+  const { error } = await supabase.storage.from("certificates").upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("certificates").getPublicUrl(path).data.publicUrl;
+}
+
 type Course = {
   id: string;
   title: string;
@@ -72,12 +98,14 @@ export function CoursesAdmin({
   deleteCourse,
   toggleCoursePublished,
   saveBanner,
+  uploadImage,
 }: {
   createCourse: (args: { data: any }) => Promise<any>;
   updateCourse: (args: { data: { id: string; payload: any } }) => Promise<any>;
   deleteCourse: (args: { data: string }) => Promise<any>;
   toggleCoursePublished: (args: { data: { id: string; is_published: boolean } }) => Promise<any>;
   saveBanner?: (args: { data: any }) => Promise<any>;
+  uploadImage?: (args: { data: { base64: string; ext: string; folder: string } }) => Promise<{ url: string }>;
 }) {
   const [items, setItems] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,6 +250,7 @@ export function CoursesAdmin({
         }}
         createCourse={createCourse}
         updateCourse={updateCourse}
+        uploadImage={uploadImage}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
@@ -247,10 +276,11 @@ export function CoursesAdmin({
         onClose={() => setModulesFor(null)}
       />
 
-      <BannerDialog 
+      <BannerDialog
         open={editingBanner}
         onClose={() => setEditingBanner(false)}
         saveBanner={saveBanner}
+        uploadImage={uploadImage}
       />
     </div>
   );
@@ -263,6 +293,7 @@ function CourseDialog({
   onSaved,
   createCourse,
   updateCourse,
+  uploadImage,
 }: {
   open: boolean;
   course: Course | null;
@@ -270,6 +301,7 @@ function CourseDialog({
   onSaved: () => void;
   createCourse: (args: { data: any }) => Promise<any>;
   updateCourse: (args: { data: { id: string; payload: any } }) => Promise<any>;
+  uploadImage?: UploadFn;
 }) {
   const [form, setForm] = useState<Omit<Course, "id">>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -313,45 +345,29 @@ function CourseDialog({
 
   const handleUploadMaterial = async (file: File) => {
     setUploading(true);
-    const ext = file.name.split(".").pop() || "pdf";
-    const rand = Math.random().toString(36).substring(2, 15);
-    const path = `materials/${rand}.${ext}`;
-    const { error } = await supabase.storage
-      .from("certificates")
-      .upload(path, file, { upsert: false });
-
-    if (error) {
+    try {
+      const url = await uploadToStorage(file, "materials", uploadImage);
+      setSupportMaterialUrl(url);
+      toast.success("Material de apoio carregado!");
+    } catch (err: any) {
+      toast.error("Erro no upload: " + (err?.message || err));
+    } finally {
       setUploading(false);
-      toast.error("Erro no upload: " + error.message);
-      return;
     }
-
-    const { data } = supabase.storage.from("certificates").getPublicUrl(path);
-    setSupportMaterialUrl(data.publicUrl);
-    setUploading(false);
-    toast.success("Material de apoio carregado!");
   };
 
   const handleUploadCover = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) return toast.error("Imagem muito grande (máx. 5MB).");
     setUploadingCover(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const rand = Math.random().toString(36).substring(2, 15);
-    const path = `courses/covers/${rand}.${ext}`;
-    
-    const { error } = await supabase.storage
-      .from("certificates")
-      .upload(path, file, { upsert: false });
-
-    if (error) {
+    try {
+      const url = await uploadToStorage(file, "courses/covers", uploadImage);
+      set("thumbnail_url", url);
+      toast.success("Capa do curso carregada!");
+    } catch (err: any) {
+      toast.error("Erro no upload da capa: " + (err?.message || err));
+    } finally {
       setUploadingCover(false);
-      toast.error("Erro no upload da capa: " + error.message);
-      return;
     }
-
-    const { data } = supabase.storage.from("certificates").getPublicUrl(path);
-    set("thumbnail_url", data.publicUrl);
-    setUploadingCover(false);
-    toast.success("Capa do curso carregada!");
   };
 
   const save = async () => {
@@ -613,10 +629,12 @@ function BannerDialog({
   open,
   onClose,
   saveBanner,
+  uploadImage,
 }: {
   open: boolean;
   onClose: () => void;
   saveBanner?: (args: { data: any }) => Promise<any>;
+  uploadImage?: UploadFn;
 }) {
   const [form, setForm] = useState({
     title: "",
@@ -673,25 +691,17 @@ function BannerDialog({
   };
 
   const handleUploadImage = async (file: File) => {
+    if (file.size > 8 * 1024 * 1024) return toast.error("Imagem muito grande (máx. 8MB).");
     setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const rand = Math.random().toString(36).substring(2, 15);
-    const path = `landing/banner-${rand}.${ext}`;
-    
-    const { error } = await supabase.storage
-      .from("certificates")
-      .upload(path, file, { upsert: false });
-
-    if (error) {
+    try {
+      const url = await uploadToStorage(file, "landing", uploadImage);
+      setForm(f => ({ ...f, image_url: url }));
+      toast.success("Imagem de banner carregada!");
+    } catch (err: any) {
+      toast.error("Erro no upload: " + (err?.message || err));
+    } finally {
       setUploading(false);
-      toast.error("Erro no upload: " + error.message);
-      return;
     }
-
-    const { data } = supabase.storage.from("certificates").getPublicUrl(path);
-    setForm(f => ({ ...f, image_url: data.publicUrl }));
-    setUploading(false);
-    toast.success("Imagem de banner carregada!");
   };
 
   const save = async () => {
