@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -801,13 +801,17 @@ function CourseDetailPage() {
   );
 }
 
+const QUESTION_SECONDS = 60;
+
 function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () => void; onPass: () => void }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [phase, setPhase] = useState<"quiz" | "result">("quiz");
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
-  const [status, setStatus] = useState<"idle" | "correct" | "wrong">("idle");
-  const [locked, setLocked] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, number | null>>({});
+  const [timeLeft, setTimeLeft] = useState(QUESTION_SECONDS);
+  const [score, setScore] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -822,36 +826,64 @@ function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () =
     })();
   }, [lesson.id]);
 
-  function burstConfetti() {
-    const colors = ["#10b981", "#34d399", "#c9a84c", "#ffffff"];
-    confetti({ particleCount: 80, spread: 70, startVelocity: 45, origin: { y: 0.6 }, colors });
-  }
-
   const current = questions[idx];
+  // Precisa acertar pelo menos 4 de 5 (ou todas, se a prova tiver menos de 5).
+  const passThreshold = questions.length >= 5 ? 4 : questions.length;
 
-  function choose(oi: number) {
-    if (locked || status === "correct" || !current) return;
-    setSelected(oi);
-    if (oi === current.correct_index) {
-      setStatus("correct");
-      setLocked(true);
-      burstConfetti();
-      setTimeout(() => {
-        if (idx + 1 >= questions.length) {
-          onPass();
-        } else {
-          setIdx((i) => i + 1);
-          setSelected(null);
-          setStatus("idle");
-          setLocked(false);
-        }
-      }, 1300);
-    } else {
-      setStatus("wrong");
+  const finish = useCallback((finalAnswers: Record<string, number | null>) => {
+    const correct = questions.filter((q) => finalAnswers[q.id] === q.correct_index).length;
+    setScore(correct);
+    setPhase("result");
+    if (questions.length > 0 && correct >= passThreshold) {
+      confetti({ particleCount: 90, spread: 75, startVelocity: 45, origin: { y: 0.6 }, colors: ["#10b981", "#34d399", "#c9a84c", "#ffffff"] });
     }
-  }
+  }, [questions, passThreshold]);
 
+  const advance = useCallback((ans: number | null) => {
+    const q = questions[idx];
+    if (!q) return;
+    const merged = { ...answers, [q.id]: ans };
+    setAnswers(merged);
+    if (idx + 1 >= questions.length) {
+      finish(merged);
+    } else {
+      setIdx((i) => i + 1);
+      setSelected(null);
+    }
+  }, [idx, questions, answers, finish]);
+
+  // Reinicia o cronômetro a cada nova pergunta.
+  useEffect(() => {
+    if (phase === "quiz") setTimeLeft(QUESTION_SECONDS);
+  }, [idx, phase]);
+
+  // Contagem regressiva (1s).
+  useEffect(() => {
+    if (phase !== "quiz" || loading || questions.length === 0 || timeLeft <= 0) return;
+    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timeLeft, phase, loading, questions.length]);
+
+  // Tempo esgotado: marca a atual com a seleção (ou em branco = errada) e avança.
+  useEffect(() => {
+    if (phase === "quiz" && !loading && questions.length > 0 && timeLeft === 0) {
+      advance(selected);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft, phase, loading]);
+
+  const restart = () => {
+    setPhase("quiz");
+    setIdx(0);
+    setSelected(null);
+    setAnswers({});
+    setScore(0);
+    setTimeLeft(QUESTION_SECONDS);
+  };
+
+  const approved = score >= passThreshold;
   const progress = questions.length > 0 ? Math.round((idx / questions.length) * 100) : 0;
+  const mmss = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background">
@@ -870,12 +902,15 @@ function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () =
         </Button>
       </div>
 
-      {!loading && questions.length > 0 && (
+      {/* Barra de progresso + cronômetro (fase de prova) */}
+      {phase === "quiz" && !loading && questions.length > 0 && (
         <div className="px-4 pt-4 sm:px-6">
           <div className="mx-auto max-w-2xl">
-            <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted-foreground">
-              <span>Pergunta {idx + 1} de {questions.length}</span>
-              <span>{progress}%</span>
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold">
+              <span className="text-muted-foreground">Pergunta {idx + 1} de {questions.length}</span>
+              <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono", timeLeft <= 10 ? "bg-red-500/15 text-red-500" : "bg-muted text-muted-foreground")}>
+                <Clock className="h-3.5 w-3.5" /> {mmss}
+              </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -892,51 +927,74 @@ function QuizScreen({ lesson, onClose, onPass }: { lesson: Lesson; onClose: () =
             <p className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
               Esta prova ainda não tem perguntas cadastradas. Avise o administrador.
             </p>
+          ) : phase === "result" ? (
+            <div className="rounded-2xl border border-border/60 bg-card p-6 text-center sm:p-8">
+              <div className={cn("mx-auto flex h-16 w-16 items-center justify-center rounded-full", approved ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/15 text-red-500")}>
+                {approved ? <CheckCircle2 className="h-8 w-8" /> : <X className="h-8 w-8" />}
+              </div>
+              <h2 className="mt-4 font-display text-2xl font-bold">{approved ? "Aprovado! 🎉" : "Não foi dessa vez"}</h2>
+              <p className="mt-2 text-lg font-semibold">
+                Você acertou <span className={approved ? "text-emerald-500" : "text-red-500"}>{score}</span> de {questions.length}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {approved
+                  ? "Você atingiu a nota mínima e pode concluir a aula."
+                  : `É necessário acertar pelo menos ${passThreshold} para concluir. Refaça a prova.`}
+              </p>
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                {approved ? (
+                  <Button className="rounded-full px-6" onClick={onPass}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Concluir aula
+                  </Button>
+                ) : (
+                  <Button className="rounded-full px-6" onClick={restart}>Refazer prova</Button>
+                )}
+                <Button variant="outline" className="rounded-full px-6" onClick={onClose}>Sair</Button>
+              </div>
+            </div>
           ) : current ? (
             <div className="rounded-2xl border border-border/60 bg-card p-5 sm:p-7">
               <p className="text-lg font-semibold leading-snug">{idx + 1}. {current.question}</p>
               <div className="mt-5 space-y-2.5">
                 {current.options.map((opt, oi) => {
                   const isSel = selected === oi;
-                  const isCorrect = status === "correct" && isSel;
-                  const isWrong = status === "wrong" && isSel;
                   return (
                     <button
                       key={oi}
                       type="button"
-                      onClick={() => choose(oi)}
-                      disabled={locked}
+                      onClick={() => setSelected(oi)}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm transition",
-                        isCorrect && "border-emerald-500 bg-emerald-500/15 font-semibold text-emerald-600",
-                        isWrong && "border-red-500 bg-red-500/15 font-semibold text-red-600",
-                        !isCorrect && !isWrong && "border-border bg-surface hover:border-primary/40",
+                        isSel ? "border-primary bg-primary/10 font-semibold" : "border-border bg-surface hover:border-primary/40",
                       )}
                     >
                       <span className={cn(
                         "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold",
-                        isCorrect && "border-emerald-500 bg-emerald-500 text-white",
-                        isWrong && "border-red-500 bg-red-500 text-white",
-                        !isCorrect && !isWrong && "border-muted-foreground/40 text-muted-foreground",
+                        isSel ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 text-muted-foreground",
                       )}>
-                        {isCorrect ? "✓" : isWrong ? "✕" : String.fromCharCode(65 + oi)}
+                        {String.fromCharCode(65 + oi)}
                       </span>
                       {opt}
                     </button>
                   );
                 })}
               </div>
-
-              {status === "correct" && (
-                <p className="mt-4 text-center text-sm font-bold text-emerald-600">Correto! Indo para a próxima… 🎉</p>
-              )}
-              {status === "wrong" && (
-                <p className="mt-4 text-center text-sm font-bold text-red-600">Resposta incorreta. Tente novamente.</p>
-              )}
             </div>
           ) : null}
         </div>
       </div>
+
+      {/* Rodapé: avançar (fase de prova) */}
+      {phase === "quiz" && !loading && questions.length > 0 && current && (
+        <div className="border-t border-border/60 p-4">
+          <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">Responda e avance. Você verá o resultado no final.</p>
+            <Button className="rounded-full px-6" disabled={selected === null} onClick={() => advance(selected)}>
+              {idx + 1 >= questions.length ? "Finalizar prova" : "Próxima pergunta"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
