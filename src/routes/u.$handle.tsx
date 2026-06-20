@@ -273,7 +273,7 @@ function PerfilUsuario() {
                 {profile.kind === "company" ? (
                   <Badge className="rounded-full border-primary/40 bg-primary/15 text-primary"><Building2 className="mr-1 h-3.5 w-3.5" /> Empresa</Badge>
                 ) : (
-                  level.tier !== "none" && <LevelBadge tier={level.tier} size="lg" />
+                  level.tier !== "none" && <LevelBadge tier={level.tier} size="sm" />
                 )}
               </div>
               <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">{profile.name}</h1>

@@ -1,10 +1,11 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Camera, Loader2, Lock, type LucideIcon } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { LevelBadge } from "@/components/LevelBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { ImageCropModal } from "@/components/ImageCropModal";
 import type { LevelTier } from "@/lib/professional-level";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,7 @@ export function ProfileHeader({
 }: Props) {
   const avatarInput = useRef<HTMLInputElement>(null);
   const coverInput = useRef<HTMLInputElement>(null);
+  const [cropTarget, setCropTarget] = useState<{ file: File; kind: "avatar" | "cover" } | null>(null);
 
   const waDigits = whatsapp?.replace(/\D/g, "") || "";
   const waHref = waDigits ? `https://wa.me/${waDigits.length > 11 ? waDigits : `55${waDigits}`}` : null;
@@ -107,7 +109,11 @@ export function ProfileHeader({
               type="file"
               accept="image/*"
               hidden
-              onChange={(e) => e.target.files?.[0] && onPickCover?.(e.target.files[0])}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) setCropTarget({ file: f, kind: "cover" });
+              }}
             />
           </>
         )}
@@ -141,7 +147,11 @@ export function ProfileHeader({
                   type="file"
                   accept="image/*"
                   hidden
-                  onChange={(e) => e.target.files?.[0] && onPickAvatar?.(e.target.files[0])}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) setCropTarget({ file: f, kind: "avatar" });
+                  }}
                 />
               </>
             )}
@@ -152,12 +162,14 @@ export function ProfileHeader({
             {eyebrow && (
               <p className="text-[11px] font-bold uppercase tracking-widest text-primary">{eyebrow}</p>
             )}
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 sm:justify-start">
-              <h1 className="font-display text-xl font-black tracking-tight sm:text-3xl">{name}</h1>
-              {verified && <VerifiedBadge size="md" label={verifiedLabel} />}
-              {levelTier && levelTier !== "none" && <LevelBadge tier={levelTier} size="md" showLabel={false} />}
-            </div>
-            {subtitle && <p className="mt-1 text-sm font-medium text-muted-foreground sm:text-base">{subtitle}</p>}
+            <h1 className="font-display text-xl font-black tracking-tight sm:text-3xl">{name}</h1>
+            {(verified || (levelTier && levelTier !== "none")) && (
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
+                {verified && <VerifiedBadge size="sm" label={verifiedLabel} />}
+                {levelTier && levelTier !== "none" && <LevelBadge tier={levelTier} size="sm" />}
+              </div>
+            )}
+            {subtitle && <p className="mt-1.5 text-sm font-medium text-muted-foreground sm:text-base">{subtitle}</p>}
           </div>
 
           {/* Ações (desktop) */}
@@ -205,6 +217,23 @@ export function ProfileHeader({
           </div>
         )}
       </div>
+
+      {cropTarget && (
+        <ImageCropModal
+          file={cropTarget.file}
+          aspect={cropTarget.kind === "avatar" ? 1 : 16 / 6}
+          cropShape={cropTarget.kind === "avatar" ? "round" : "rect"}
+          title={cropTarget.kind === "avatar" ? "Ajustar foto de perfil" : "Ajustar foto de capa"}
+          maxWidth={cropTarget.kind === "avatar" ? 600 : 1600}
+          maxHeight={cropTarget.kind === "avatar" ? 600 : 900}
+          onCancel={() => setCropTarget(null)}
+          onConfirm={(croppedFile) => {
+            if (cropTarget.kind === "avatar") onPickAvatar?.(croppedFile);
+            else onPickCover?.(croppedFile);
+            setCropTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }
