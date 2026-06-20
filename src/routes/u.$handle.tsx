@@ -22,6 +22,7 @@ import { computeLevel } from "@/lib/professional-level";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ExperienceList, toMonthInput, type ExperienceDraft } from "@/components/ProfessionalExperiences";
 import { ProfessionalInfo } from "@/components/ProfessionalInfo";
+import { ProfileHeader } from "@/components/ProfileHeader";
 import { LockedInfo } from "@/components/LockedInfo";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Lock } from "lucide-react";
@@ -215,117 +216,45 @@ function PerfilUsuario() {
 
   return (
     <div className="pb-12">
-      {/* COVER */}
-      <div className="relative h-40 overflow-hidden border-b border-border/60 sm:h-56">
-        {cover ? (
-          <img src={cover} alt="Capa" className="h-full w-full object-cover" />
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-gradient-gold opacity-30" />
-            <div className="absolute inset-0 bg-radial-gold" />
-          </>
-        )}
-        <button
-          onClick={() => navigate({ to: "/feed" })}
-          className="absolute left-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-background/70 text-foreground backdrop-blur transition hover:bg-background"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        {isOwner && (
-          <>
+      <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-12">
+        <ProfileHeader
+          name={profile.name}
+          initials={profile.initials}
+          eyebrow={profile.kind === "company" ? "Empresa" : "Profissional"}
+          subtitle={profile.role}
+          username={profile.username || (profile.kind === "professional" ? slugifyHandle(profile.name) : undefined)}
+          avatarUrl={avatar}
+          coverUrl={cover}
+          levelTier={profile.kind === "professional" ? level.tier : undefined}
+          whatsapp={profile.whatsapp}
+          contactLocked={!canView}
+          meta={profile.location ? [{ icon: MapPin, text: profile.location }] : []}
+          stats={profile.kind === "professional" ? [
+            { label: "Cursos", value: String(cursos) },
+            { label: "Anos de exp.", value: String(anos) },
+            { label: "Postos", value: String(postos) },
+          ] : []}
+          actions={
             <Button
-              size="sm"
-              variant="secondary"
-              className="absolute right-4 top-4 rounded-full"
-              onClick={() => coverInput.current?.click()}
+              variant="outline"
+              className={`h-11 rounded-full ${fav ? "border-primary/40 text-primary" : ""}`}
+              onClick={() => {
+                toggle(profile.id, profile.kind);
+                toast.success(fav ? "Removido dos favoritos" : "Adicionado aos favoritos");
+              }}
             >
-              <Camera className="mr-2 h-4 w-4" /> Trocar capa
+              <Heart className={`mr-2 h-4 w-4 ${fav ? "fill-primary text-primary" : ""}`} />
+              {fav ? "Favorito" : "Salvar"}
             </Button>
-            <input ref={coverInput} type="file" accept="image/*" hidden onChange={(e) => onPick(e, "cover")} />
-          </>
-        )}
-      </div>
+          }
+        />
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="-mt-16 rounded-3xl border border-border/60 bg-card p-6 shadow-elevated sm:p-8">
-          <div className="flex flex-wrap items-end gap-6">
-            <div className="relative">
-              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-gradient-gold font-display text-4xl font-extrabold text-primary-foreground shadow-gold">
-                {avatar ? <img src={avatar} alt={profile.name} className="h-full w-full object-cover" /> : profile.initials}
-              </div>
-              {isOwner && (
-                <>
-                  <button
-                    onClick={() => avatarInput.current?.click()}
-                    className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow"
-                    aria-label="Trocar foto"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </button>
-                  <input ref={avatarInput} type="file" accept="image/*" hidden onChange={(e) => onPick(e, "avatar")} />
-                </>
-              )}
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <div>
-                {profile.kind === "company" ? (
-                  <Badge className="rounded-full border-primary/40 bg-primary/15 text-primary"><Building2 className="mr-1 h-3.5 w-3.5" /> Empresa</Badge>
-                ) : (
-                  level.tier !== "none" && <LevelBadge tier={level.tier} size="sm" />
-                )}
-              </div>
-              <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">{profile.name}</h1>
-              {(profile.username || profile.handle) && (
-                <p className="mt-1 text-sm font-medium text-primary">@{profile.username || slugifyHandle(profile.name) || profile.handle}</p>
-              )}
-              <p className="mt-1 text-muted-foreground">{profile.role}</p>
-              {profile.location && (
-                <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 text-primary" /> {profile.location}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              {profile.whatsapp && (
-                canView ? (
-                  <Button asChild className="h-12 rounded-full bg-[#25D366] px-6 font-semibold text-white hover:bg-[#1ebe5a]">
-                    <a href={`https://wa.me/${profile.whatsapp}`} target="_blank" rel="noreferrer">
-                      <WhatsAppIcon className="mr-2 h-5 w-5 text-white" /> WhatsApp
-                    </a>
-                  </Button>
-                ) : (
-                  <Button asChild className="h-12 rounded-full bg-muted px-6 font-semibold text-muted-foreground hover:bg-muted/80">
-                    <Link to="/minha-assinatura"><Lock className="mr-2 h-5 w-5" /> Assine para ver contato</Link>
-                  </Button>
-                )
-              )}
-              <Button
-                variant="outline"
-                className={`h-12 rounded-full ${fav ? "border-primary/40 text-primary" : ""}`}
-                onClick={() => {
-                  toggle(profile.id, profile.kind);
-                  toast.success(fav ? "Removido dos favoritos" : "Adicionado aos favoritos");
-                }}
-              >
-                <Heart className={`mr-2 h-5 w-5 ${fav ? "fill-primary text-primary" : ""}`} />
-                {fav ? "Favorito" : "Salvar"}
-              </Button>
-            </div>
+        {profile.bio && (
+          <div className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-7">
+            <h3 className="mb-2 font-display text-lg font-bold">Sobre</h3>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{profile.bio}</p>
           </div>
-
-          {profile.kind === "professional" && (
-            <div className="mt-8 grid grid-cols-3 gap-3 border-t border-border/60 pt-6">
-              <Stat label="Cursos" value={String(cursos)} />
-              <Stat label="Anos de experiência" value={String(anos)} />
-              <Stat label="Postos atendidos" value={String(postos)} />
-            </div>
-          )}
-
-          {profile.bio && <p className="mt-6 text-foreground/80">{profile.bio}</p>}
-        </div>
+        )}
 
         {profile.kind === "professional" && (
           <div className="mt-6">

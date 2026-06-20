@@ -16,6 +16,7 @@ type Props = {
   name: string;
   initials: string;
   subtitle?: string;
+  username?: string | null;
   eyebrow?: string;
   avatarUrl?: string | null;
   coverUrl?: string | null;
@@ -39,6 +40,7 @@ export function ProfileHeader({
   name,
   initials,
   subtitle,
+  username,
   eyebrow,
   avatarUrl,
   coverUrl,
@@ -163,6 +165,7 @@ export function ProfileHeader({
               <p className="text-[11px] font-bold uppercase tracking-widest text-primary">{eyebrow}</p>
             )}
             <h1 className="font-display text-xl font-black tracking-tight sm:text-3xl">{name}</h1>
+            {username && <p className="mt-0.5 text-sm font-medium text-primary">@{username}</p>}
             {(verified || (levelTier && levelTier !== "none")) && (
               <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
                 {verified && <VerifiedBadge size="sm" label={verifiedLabel} />}
