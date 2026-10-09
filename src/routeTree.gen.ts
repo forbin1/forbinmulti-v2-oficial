@@ -46,6 +46,7 @@ import { Route as AdminVagasRouteImport } from './routes/admin.vagas'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
 import { Route as AdminPlanosRouteImport } from './routes/admin.planos'
 import { Route as AdminLandingRouteImport } from './routes/admin.landing'
+import { Route as AdminGratuidadeRouteImport } from './routes/admin.gratuidade'
 import { Route as AdminExperienciasRouteImport } from './routes/admin.experiencias'
 import { Route as AdminCursosRouteImport } from './routes/admin.cursos'
 import { Route as AdminCertificadosRouteImport } from './routes/admin.certificados'
@@ -236,6 +237,11 @@ const AdminLandingRoute = AdminLandingRouteImport.update({
   path: '/landing',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGratuidadeRoute = AdminGratuidadeRouteImport.update({
+  id: '/gratuidade',
+  path: '/gratuidade',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminExperienciasRoute = AdminExperienciasRouteImport.update({
   id: '/experiencias',
   path: '/experiencias',
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/admin/certificados': typeof AdminCertificadosRoute
   '/admin/cursos': typeof AdminCursosRoute
   '/admin/experiencias': typeof AdminExperienciasRoute
+  '/admin/gratuidade': typeof AdminGratuidadeRoute
   '/admin/landing': typeof AdminLandingRoute
   '/admin/planos': typeof AdminPlanosRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
@@ -319,6 +326,7 @@ export interface FileRoutesByTo {
   '/admin/certificados': typeof AdminCertificadosRoute
   '/admin/cursos': typeof AdminCursosRoute
   '/admin/experiencias': typeof AdminExperienciasRoute
+  '/admin/gratuidade': typeof AdminGratuidadeRoute
   '/admin/landing': typeof AdminLandingRoute
   '/admin/planos': typeof AdminPlanosRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
@@ -363,6 +371,7 @@ export interface FileRoutesById {
   '/admin/certificados': typeof AdminCertificadosRoute
   '/admin/cursos': typeof AdminCursosRoute
   '/admin/experiencias': typeof AdminExperienciasRoute
+  '/admin/gratuidade': typeof AdminGratuidadeRoute
   '/admin/landing': typeof AdminLandingRoute
   '/admin/planos': typeof AdminPlanosRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
@@ -408,6 +417,7 @@ export interface FileRouteTypes {
     | '/admin/certificados'
     | '/admin/cursos'
     | '/admin/experiencias'
+    | '/admin/gratuidade'
     | '/admin/landing'
     | '/admin/planos'
     | '/admin/profissionais'
@@ -448,6 +458,7 @@ export interface FileRouteTypes {
     | '/admin/certificados'
     | '/admin/cursos'
     | '/admin/experiencias'
+    | '/admin/gratuidade'
     | '/admin/landing'
     | '/admin/planos'
     | '/admin/profissionais'
@@ -491,6 +502,7 @@ export interface FileRouteTypes {
     | '/admin/certificados'
     | '/admin/cursos'
     | '/admin/experiencias'
+    | '/admin/gratuidade'
     | '/admin/landing'
     | '/admin/planos'
     | '/admin/profissionais'
@@ -799,6 +811,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLandingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/gratuidade': {
+      id: '/admin/gratuidade'
+      path: '/gratuidade'
+      fullPath: '/admin/gratuidade'
+      preLoaderRoute: typeof AdminGratuidadeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/experiencias': {
       id: '/admin/experiencias'
       path: '/experiencias'
@@ -835,6 +854,7 @@ interface AdminRouteChildren {
   AdminCertificadosRoute: typeof AdminCertificadosRoute
   AdminCursosRoute: typeof AdminCursosRoute
   AdminExperienciasRoute: typeof AdminExperienciasRoute
+  AdminGratuidadeRoute: typeof AdminGratuidadeRoute
   AdminLandingRoute: typeof AdminLandingRoute
   AdminPlanosRoute: typeof AdminPlanosRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
@@ -848,6 +868,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCertificadosRoute: AdminCertificadosRoute,
   AdminCursosRoute: AdminCursosRoute,
   AdminExperienciasRoute: AdminExperienciasRoute,
+  AdminGratuidadeRoute: AdminGratuidadeRoute,
   AdminLandingRoute: AdminLandingRoute,
   AdminPlanosRoute: AdminPlanosRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,

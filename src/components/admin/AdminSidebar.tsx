@@ -13,6 +13,7 @@ import {
   Shield,
   Menu,
   Store,
+  Gift,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const ITEMS: Item[] = [
   { to: "/admin/experiencias", label: "Experiências", icon: Sparkles },
   { to: "/admin/landing", label: "Landing Page", icon: LayoutTemplate },
   { to: "/admin/planos", label: "Planos", icon: CreditCard },
+  { to: "/admin/gratuidade", label: "Modo de Gratuidade", icon: Gift },
   { to: "/admin/certificados", label: "Certificados", icon: Award },
 ];
 
