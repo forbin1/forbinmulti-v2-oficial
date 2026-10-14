@@ -55,6 +55,17 @@ function friendlyError(status: number, body: string): string {
 
 /** Salva vsl_url sem depender de upsert: atualiza; se não existir, insere. */
 async function saveVslUrl(value: string): Promise<{ message: string } | null> {
+  // 1) Função segura no banco (set_vsl_url)
+  const rpc = await (supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ error: { message: string; code?: string } | null }>)("set_vsl_url", { _value: value });
+  if (!rpc.error) return null;
+  const missingFn =
+    rpc.error.code === "PGRST202" || /could not find the function|does not exist/i.test(rpc.error.message);
+  if (!missingFn) return rpc.error;
+
+  // 2) Fallback: update; se a linha existe mas RLS bloqueou, avisa claramente
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("site_settings")
@@ -63,6 +74,16 @@ async function saveVslUrl(value: string): Promise<{ message: string } | null> {
     .select("key");
   if (error) return error;
   if (data && data.length > 0) return null;
+  const { data: exists } = await supabase
+    .from("site_settings")
+    .select("key")
+    .eq("key", "vsl_url")
+    .maybeSingle();
+  if (exists)
+    return {
+      message:
+        "Sem permissão para atualizar site_settings. Rode a migration 20261014200000_set_vsl_url_rpc.sql no Supabase.",
+    };
   const { error: insErr } = await supabase
     .from("site_settings")
     .insert({ key: "vsl_url", value, updated_at: now });
