@@ -1,6 +1,7 @@
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import appCss from "../styles.css?url";
+import logoUrl from "@/assets/forbin-logo.png";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Toaster } from "@/components/ui/sonner";
@@ -49,6 +50,7 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "/og-image.png" },
     ],
     links: [
+      { rel: "preload", as: "image", href: logoUrl, fetchPriority: "high" } as any,
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

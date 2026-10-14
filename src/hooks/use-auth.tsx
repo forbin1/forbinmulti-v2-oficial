@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -23,6 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: null,
   });
 
+  // Uma única busca de role por usuário (evita requisições e renders repetidos)
+  const roleRequestFor = useRef<string | null>(null);
   const fetchRole = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("user_roles")
@@ -32,13 +34,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle();
     return data?.role ?? null;
   }, []);
+  const loadRoleOnce = useCallback((user: User) => {
+    if (roleRequestFor.current === user.id) return;
+    roleRequestFor.current = user.id;
+    if (user.email === "admin@gmail.com") {
+      setState((prev) => (prev.role === "admin" ? prev : { ...prev, role: "admin" }));
+      return;
+    }
+    fetchRole(user.id).then((fetchedRole) => {
+      const finalRole = fetchedRole || user.user_metadata?.role || "professional";
+      setState((prev) => (prev.role === finalRole ? prev : { ...prev, role: finalRole }));
+    });
+  }, [fetchRole]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         const user = session?.user ?? null;
         // Atualiza estado imediatamente — NÃO use await aqui (deadlock do Supabase)
-        setState((prev) => ({ user, session, loading: false, role: prev.role }));
+        setState((prev) =>
+          prev.user?.id === user?.id && prev.session?.access_token === session?.access_token && !prev.loading
+            ? prev
+            : { user, session, loading: false, role: user ? prev.role : null }
+        );
         if (user) {
           // Check for pending company registration sync
           const pendingSync = localStorage.getItem(`pending_company_sync_${user.id}`);
@@ -58,22 +76,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
 
-          // Busca role de forma diferida (fire-and-forget)
-          setTimeout(() => {
-            fetchRole(user.id).then((fetchedRole) => {
-              const finalRole = user.email === "admin@gmail.com" ? "admin" : (fetchedRole || user.user_metadata?.role || "professional");
-              setState((prev) => ({ ...prev, role: finalRole }));
-            });
-          }, 0);
+          // Busca role de forma diferida (fire-and-forget), uma vez por usuário
+          setTimeout(() => loadRoleOnce(user), 0);
         } else {
-          setState((prev) => ({ ...prev, role: null }));
+          roleRequestFor.current = null;
+          setState((prev) => (prev.role === null ? prev : { ...prev, role: null }));
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const user = session?.user ?? null;
-      setState((prev) => ({ user, session, loading: false, role: prev.role }));
+      setState((prev) =>
+        prev.user?.id === user?.id && !prev.loading ? prev : { user, session, loading: false, role: prev.role }
+      );
       if (user) {
         // Check for pending company registration sync
         const pendingSync = localStorage.getItem(`pending_company_sync_${user.id}`);
@@ -91,23 +107,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        fetchRole(user.id).then((fetchedRole) => {
-          const finalRole = user.email === "admin@gmail.com" ? "admin" : (fetchedRole || user.user_metadata?.role || "professional");
-          setState((prev) => ({ ...prev, role: finalRole }));
-        });
+        loadRoleOnce(user);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchRole]);
+  }, [loadRoleOnce]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    roleRequestFor.current = null;
     setState({ user: null, session: null, loading: false, role: null });
   }, []);
 
+  const value = useMemo(() => ({ ...state, signOut }), [state, signOut]);
+
   return (
-    <AuthContext.Provider value={{ ...state, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

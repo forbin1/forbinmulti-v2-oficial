@@ -8,6 +8,9 @@ export function Logo({ size = 64 }: { size?: number }) {
         alt="FORBIN"
         width={size}
         height={size}
+        loading="eager"
+        decoding="async"
+        fetchPriority="high"
         className="rounded-full ring-1 ring-primary/40"
       />
       <div className="flex flex-col leading-none">
