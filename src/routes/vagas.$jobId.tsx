@@ -108,7 +108,7 @@ export const Route = createFileRoute("/vagas/$jobId")({
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.job.title} — FORBIN MultiEmpresas` },
+          { title: `${loaderData.job.title} — FORBIN Conexões` },
           { name: "description", content: loaderData.job.description },
           { property: "og:title", content: loaderData.job.title },
           { property: "og:description", content: loaderData.job.description },

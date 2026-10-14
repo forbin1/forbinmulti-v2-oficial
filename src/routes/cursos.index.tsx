@@ -31,7 +31,7 @@ const getCourses = createServerFn({ method: "GET" }).handler(async () => {
 export const Route = createFileRoute("/cursos/")({
   head: () => ({
     meta: [
-      { title: "Área de Membros — FORBIN MultiEmpresas" },
+      { title: "Área de Membros — FORBIN Conexões" },
       { name: "description", content: "Área de membros com cursos de segurança privada e certificado FORBIN." },
     ],
   }),
@@ -168,7 +168,7 @@ function CursosPage() {
               Área de Membros
             </p>
             <h1 className="font-display text-base font-bold leading-tight sm:text-4xl lg:text-5xl">
-              FORBIN MultiEmpresas
+              FORBIN Conexões
             </h1>
             <p className="mt-1 max-w-xl text-[11px] leading-snug text-white/70 sm:mt-2 sm:text-base">
               Capacite-se com os melhores cursos de segurança privada. Certificado FORBIN incluso.

@@ -25,7 +25,7 @@ import { useLandingContent } from "@/hooks/use-landing-content";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FORBIN MultiEmpresas — Vagas em segurança privada" },
+      { title: "FORBIN Conexões — Vagas em segurança privada" },
       {
         name: "description",
         content:

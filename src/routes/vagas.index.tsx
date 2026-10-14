@@ -89,7 +89,7 @@ export const Route = createFileRoute("/vagas/")({
   },
   head: () => ({
     meta: [
-      { title: "Vagas — FORBIN MultiEmpresas" },
+      { title: "Vagas — FORBIN Conexões" },
       { name: "description", content: "Explore vagas de segurança privada por região, função e tipo de contratação." },
     ],
   }),

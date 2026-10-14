@@ -11,7 +11,7 @@ export const LANDING_DEFAULTS: LandingContent = {
   hero_title_highlight: "missão profissional",
   hero_title_2: "começa aqui.",
   hero_subtitle:
-    "FORBIN MultiEmpresas conecta vigilantes, supervisores, escoltas e empresas do setor em uma plataforma feita para quem leva segurança a sério.",
+    "FORBIN Conexões conecta vigilantes, supervisores, escoltas e empresas do setor em uma plataforma feita para quem leva segurança a sério.",
   hero_cta_pro: "Sou profissional",
   hero_cta_company: "Sou empresa",
   hero_image: "",

@@ -14,7 +14,7 @@ import { computeLevel, type LevelTier, type LevelExperienceInput } from "@/lib/p
 export const Route = createFileRoute("/feed")({
   head: () => ({
     meta: [
-      { title: "Experiências — FORBIN MultiEmpresas" },
+      { title: "Experiências — FORBIN Conexões" },
       { name: "description", content: "Acompanhe experiências de profissionais e empresas do setor de segurança privada." },
     ],
   }),

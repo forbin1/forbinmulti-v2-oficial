@@ -783,7 +783,7 @@ function BannerDialog({
               <Input 
                 value={form.title} 
                 onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} 
-                placeholder="Ex: FORBIN MultiEmpresas"
+                placeholder="Ex: FORBIN Conexões"
               />
             </Field>
 

@@ -11,7 +11,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Entrar — FORBIN MultiEmpresas" },
+      { title: "Entrar — FORBIN Conexões" },
       { name: "description", content: "Acesse sua conta na plataforma FORBIN." },
     ],
   }),

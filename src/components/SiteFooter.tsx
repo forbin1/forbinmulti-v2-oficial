@@ -44,7 +44,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
         <div>
-          © {new Date().getFullYear()} FORBIN MultiEmpresas. Todos os direitos reservados.
+          © {new Date().getFullYear()} FORBIN Conexões. Todos os direitos reservados.
         </div>
         <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60 transition-colors duration-300">
           <span>desenvolvido com 💛 por</span>

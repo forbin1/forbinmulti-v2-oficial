@@ -28,7 +28,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { CheckoutModal } from "@/components/CheckoutModal";
 
 export const Route = createFileRoute("/cursos/$courseId")({
-  head: () => ({ meta: [{ title: "Curso — FORBIN MultiEmpresas" }] }),
+  head: () => ({ meta: [{ title: "Curso — FORBIN Conexões" }] }),
   component: CourseDetailPage,
 });
 
