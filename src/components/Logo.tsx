@@ -14,8 +14,8 @@ export function Logo({ size = 64 }: { size?: number }) {
         className="rounded-full ring-1 ring-primary/40"
       />
       <div className="flex flex-col leading-none">
-        <span className="font-display text-xl font-bold tracking-tight text-foreground">
-          FORBIN
+        <span className="whitespace-nowrap font-display text-base font-bold tracking-tight text-foreground sm:text-xl">
+          GRUPO FORBIN
         </span>
       </div>
     </div>
