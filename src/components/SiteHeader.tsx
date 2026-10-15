@@ -399,6 +399,24 @@ export function SiteHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 lg:hidden">
+          {/* Mobile: Entrar / Cadastrar (minimalista) */}
+          {!loading && !user && (
+            <div className="flex items-center gap-1 md:hidden">
+              <Link
+                to="/login"
+                className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Entrar
+              </Link>
+              <Link
+                to="/planos"
+                className="rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-gold transition-transform active:scale-95"
+              >
+                Cadastrar
+              </Link>
+            </div>
+          )}
+
           {/* Mobile Notifications Button & Drawer */}
           {user && (
             <Sheet>
