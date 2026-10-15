@@ -14,7 +14,9 @@ import {
   Menu,
   Store,
   Gift,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
@@ -47,6 +49,8 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  const { signOut } = useAuth();
+
   const handleBack = (e: React.MouseEvent) => {
     e.preventDefault();
     const to = getReturnPath();
@@ -54,13 +58,19 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
     navigate({ to });
   };
 
+  const handleSignOut = async () => {
+    onNavigate?.();
+    await signOut();
+    navigate({ to: "/" });
+  };
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-20 items-center border-b border-border/60 px-6">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-16 shrink-0 items-center border-b border-border/60 px-6">
         <Logo />
       </div>
 
-      <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-4 py-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Shield className="h-4 w-4" />
         </div>
@@ -70,7 +80,7 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
         {ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
@@ -93,7 +103,7 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-border/60 p-3">
+      <div className="shrink-0 space-y-2 border-t border-border/60 p-3">
         <a
           href="#"
           onClick={handleBack}
@@ -102,6 +112,14 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
           <ArrowLeft className="h-4 w-4" />
           Voltar à plataforma
         </a>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair da conta
+        </button>
       </div>
     </div>
   );
@@ -109,7 +127,7 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AdminSidebar() {
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-border/60 bg-card lg:block">
+    <aside className="sticky top-0 hidden h-screen h-[100dvh] w-64 shrink-0 self-start border-r border-border/60 bg-card lg:block">
       <SidebarContents />
     </aside>
   );
