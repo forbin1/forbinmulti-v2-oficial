@@ -37,7 +37,7 @@ export function SiteFooter() {
             Contato
           </h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>multiempresas@forbin.com.br</li>
+            <li>contato@forbin.com.br</li>
             <li>Brasil — 24h</li>
           </ul>
         </div>
